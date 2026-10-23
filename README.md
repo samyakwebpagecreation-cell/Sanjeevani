@@ -2,8 +2,8 @@
 
 > **Transforming Every Smartphone into an Offline-Resilient Pre-Hospital Trauma Command Center.**  
 > 🌐 **Live Web Application:** [https://sanjeevani-v2.web.app](https://sanjeevani-v2.web.app)  
-> 🏫 **Origin:** Seth M.R. Jaipuria School (Recognized among the World's Top 10 Schools by T4 Education)  
-> 👥 **Founders:** Dakshita Kapoor & Samyak Verma | **Key Contributor:** Siddhi Misra
+> 🏫 **Origin:** Seth M.R. Jaipuria School.  
+> 👥 **Founders:** Yagyesh Pandey & Samyak Verma | **Key Contributor:** Siddhi Mishra, Mr. Vijay Rastogi, Sarthak Mishra.
 
 ---
 
