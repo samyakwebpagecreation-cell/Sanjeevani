@@ -1,0 +1,395 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: customer_reviews
+// Document ID: Auto-generated or client UUID
+// Fields:
+//   - authorName: string (required, 1-100 chars) - Submitter name/alias
+//   - story: string (required, 1-2000 chars) - Lifesaving testimonial or feedback
+//   - rating: number (required, 1-5) - Star rating
+//   - role: string (optional, 0-100 chars) - Submitter role/background
+//   - categoryTag: string (optional, 0-100 chars) - Emergency/feature category
+//   - badge: string (optional, 0-100 chars) - Community recognition tag
+//   - userId: string (optional, 1-128 chars, immutable) - Submitter user ID
+//   - isUserSubmitted: bool (optional) - Client-submitted indicator
+//   - id: string (optional, 1-128 chars, immutable) - Review identifier
+//   - date: string (optional, 0-50 chars) - Display timestamp string
+//   - createdAt: timestamp | string (optional, immutable)
+//
+// Collection: users/{userId}
+// Document ID: Matches Firebase Auth UID
+// Fields:
+//   - uid: string (optional, immutable, must match {userId})
+//   - fullName: string (optional, 1-100 chars) - Responder/user display name
+//   - role: string (required, 'student' | 'parent' | 'responder' | 'teacher')
+//   - email: string (optional, valid email format)
+//   - phone: string (optional, 0-25 chars)
+//   - stats: map (optional) - XP, level, drills, readiness metrics
+//   - bookmarks: list (optional, max 100 items of string <= 50 chars)
+//   - createdAt: timestamp | string (optional, immutable)
+//   - updatedAt: timestamp | string (optional)
+//
+// Collection: squad_sessions/{sessionId} & emergency_sessions/{sessionId}
+// Document ID: {sessionId} (6-character code or UUID)
+// Fields:
+//   - id: string (required, 1-64 chars, immutable)
+//   - status: string (required, 'active' | 'resolved' | 'cancelled')
+//   - leaderId: string (optional, 0-64 chars)
+//   - leaderName: string (optional, 0-100 chars)
+//   - protocolId: string (optional, 0-64 chars)
+//   - protocolTitle: string (optional, 0-100 chars)
+//   - locationNotes: string (optional, 0-500 chars)
+//   - locationAddress: string (optional, 0-500 chars)
+//   - incidentSummary: string (optional, 0-1000 chars)
+//   - urgencyLevel: string (optional, 'CRITICAL_112' | 'URGENT' | 'MONITOR')
+//   - gpsCoordinates: map (optional) - lat, lng coordinates
+//   - nearestHospital: map (optional) - Hospital dispatch metadata
+//   - roles: map (optional) - Real-time bystander task assignments
+//   - bystanderCount: number (optional, >= 0, <= 1000)
+//   - qrSvg: string (optional, max 50000 chars)
+//   - joinUrl: string (optional, max 500 chars)
+//   - photoPreviewUrl: string (optional, max 1000 chars)
+//   - createdAt: timestamp | string (optional, immutable)
+//   - updatedAt: timestamp | string (optional)
+//
+// Collection: paramedic_dockets/{docketId}
+// Document ID: {docketId} (SBAR telemetry transfer docket)
+// Fields:
+//   - id: string (required, 1-64 chars, immutable)
+//   - incidentId: string (optional, 0-64 chars)
+//   - patientStatus: string (optional, 0-200 chars)
+//   - responderName: string (optional, 0-100 chars)
+//   - protocolTitle: string (optional, 0-100 chars)
+//   - startedAt: string (optional, 0-100 chars)
+//   - completedAt: string (optional, 0-100 chars)
+//   - totalDurationSeconds: number (optional, >= 0)
+//   - cprDurationSeconds: number (optional, >= 0)
+//   - cprCyclesCount: number (optional, >= 0)
+//   - cprAverageAccuracy: number (optional, >= 0, <= 100)
+//   - coolingMinutes: number (optional, >= 0)
+//   - pressureMinutes: number (optional, >= 0)
+//   - stepsCompleted: list (optional, max 50 strings <= 200 chars)
+//   - vitalSignsObservations: list (optional, max 50 strings <= 200 chars)
+//   - nearestHospitalDispatched: string (optional, 0-200 chars)
+//   - qrPayload: string (optional, max 10000 chars)
+//   - createdAt: timestamp | string (optional, immutable)
+//
+// Collection: emergency_incidents/{incidentId} & incidents/{incidentId}
+// Document ID: {incidentId}
+// Fields:
+//   - id: string (required, 1-64 chars, immutable)
+//   - userId: string (optional, 0-64 chars, immutable)
+//   - protocolId: string (required, 1-64 chars)
+//   - protocolTitle: string (required, 1-100 chars)
+//   - startedAt: string (optional, 0-100 chars)
+//   - completedAt: string (optional, 0-100 chars)
+//   - durationSeconds: number (optional, >= 0)
+//   - stepsCompleted: list (optional, max 50 strings <= 200 chars)
+//   - escalationTriggered: bool (optional)
+//   - escalationReason: string (optional, 0-500 chars)
+//   - sensorObservations: list (optional, max 50 strings <= 200 chars)
+//   - createdAt: timestamp | string (optional, immutable)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        ('admin' in request.auth.token && request.auth.token.admin == true) ||
+        ('role' in request.auth.token && request.auth.token.role == 'admin')
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidOptionalString(data, field, minLen, maxLen) {
+      return !(field in data) ||
+             data[field] == null ||
+             (data[field] is string &&
+              data[field].size() >= minLen &&
+              data[field].size() <= maxLen);
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+             email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    // ===============================================================
+    // Domain Validators (Applied to both create and update)
+    // ===============================================================
+
+    function isValidReview(data) {
+      return hasRequiredFields(data, ['authorName', 'story', 'rating']) &&
+             data.authorName is string &&
+             data.authorName.size() >= 1 &&
+             data.authorName.size() <= 100 &&
+             data.story is string &&
+             data.story.size() >= 1 &&
+             data.story.size() <= 2000 &&
+             data.rating is number &&
+             data.rating >= 1 &&
+             data.rating <= 5 &&
+             isValidOptionalString(data, 'role', 0, 100) &&
+             isValidOptionalString(data, 'categoryTag', 0, 100) &&
+             isValidOptionalString(data, 'badge', 0, 100) &&
+             isValidOptionalString(data, 'userId', 1, 128) &&
+             isValidOptionalString(data, 'userEmail', 0, 128) &&
+             isValidOptionalString(data, 'id', 1, 128) &&
+             isValidOptionalString(data, 'date', 0, 50) &&
+             isValidOptionalString(data, 'platform', 0, 50) &&
+             (!('verified' in data) || data.verified == null || data.verified is bool) &&
+             (!('isUserSubmitted' in data) || data.isUserSubmitted == null || data.isUserSubmitted is bool) &&
+             (!('createdAt' in data) || data.createdAt == null || data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidUser(data) {
+      return (!('role' in data) || (data.role in ['student', 'parent', 'responder', 'teacher'])) &&
+             isValidOptionalString(data, 'uid', 1, 128) &&
+             isValidOptionalString(data, 'fullName', 1, 100) &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             isValidOptionalString(data, 'phone', 0, 25) &&
+             (!('stats' in data) || data.stats is map) &&
+             (!('bookmarks' in data) || (data.bookmarks is list && data.bookmarks.size() <= 100)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    function isValidSquadSession(data) {
+      return hasRequiredFields(data, ['id', 'status']) &&
+             data.id is string &&
+             data.id.size() >= 1 &&
+             data.id.size() <= 64 &&
+             data.status in ['active', 'resolved', 'cancelled'] &&
+             isValidOptionalString(data, 'leaderId', 0, 64) &&
+             isValidOptionalString(data, 'leaderName', 0, 100) &&
+             isValidOptionalString(data, 'protocolId', 0, 64) &&
+             isValidOptionalString(data, 'protocolTitle', 0, 100) &&
+             isValidOptionalString(data, 'locationNotes', 0, 500) &&
+             isValidOptionalString(data, 'locationAddress', 0, 500) &&
+             isValidOptionalString(data, 'incidentSummary', 0, 1000) &&
+             (!('urgencyLevel' in data) || data.urgencyLevel in ['CRITICAL_112', 'URGENT', 'MONITOR']) &&
+             (!('gpsCoordinates' in data) || data.gpsCoordinates is map) &&
+             (!('nearestHospital' in data) || data.nearestHospital is map) &&
+             (!('roles' in data) || data.roles is map) &&
+             (!('bystanderCount' in data) || (data.bystanderCount is number && data.bystanderCount >= 0 && data.bystanderCount <= 1000)) &&
+             isValidOptionalString(data, 'qrSvg', 0, 50000) &&
+             isValidOptionalString(data, 'joinUrl', 0, 500) &&
+             isValidOptionalString(data, 'photoPreviewUrl', 0, 1000) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    function isValidParamedicDocket(data) {
+      return hasRequiredFields(data, ['id']) &&
+             data.id is string &&
+             data.id.size() >= 1 &&
+             data.id.size() <= 64 &&
+             isValidOptionalString(data, 'incidentId', 0, 64) &&
+             isValidOptionalString(data, 'patientStatus', 0, 200) &&
+             isValidOptionalString(data, 'responderName', 0, 100) &&
+             isValidOptionalString(data, 'protocolTitle', 0, 100) &&
+             isValidOptionalString(data, 'startedAt', 0, 100) &&
+             isValidOptionalString(data, 'completedAt', 0, 100) &&
+             (!('totalDurationSeconds' in data) || (data.totalDurationSeconds is number && data.totalDurationSeconds >= 0)) &&
+             (!('cprDurationSeconds' in data) || (data.cprDurationSeconds is number && data.cprDurationSeconds >= 0)) &&
+             (!('cprCyclesCount' in data) || (data.cprCyclesCount is number && data.cprCyclesCount >= 0)) &&
+             (!('cprAverageAccuracy' in data) || (data.cprAverageAccuracy is number && data.cprAverageAccuracy >= 0 && data.cprAverageAccuracy <= 100)) &&
+             (!('coolingMinutes' in data) || (data.coolingMinutes is number && data.coolingMinutes >= 0)) &&
+             (!('pressureMinutes' in data) || (data.pressureMinutes is number && data.pressureMinutes >= 0)) &&
+             (!('stepsCompleted' in data) || (data.stepsCompleted is list && data.stepsCompleted.size() <= 50)) &&
+             (!('vitalSignsObservations' in data) || (data.vitalSignsObservations is list && data.vitalSignsObservations.size() <= 50)) &&
+             isValidOptionalString(data, 'nearestHospitalDispatched', 0, 200) &&
+             isValidOptionalString(data, 'qrPayload', 0, 10000) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    function isValidIncident(data) {
+      return hasRequiredFields(data, ['id', 'protocolId', 'protocolTitle']) &&
+             data.id is string &&
+             data.id.size() >= 1 &&
+             data.id.size() <= 64 &&
+             data.protocolId is string &&
+             data.protocolId.size() >= 1 &&
+             data.protocolId.size() <= 64 &&
+             data.protocolTitle is string &&
+             data.protocolTitle.size() >= 1 &&
+             data.protocolTitle.size() <= 100 &&
+             isValidOptionalString(data, 'userId', 0, 64) &&
+             isValidOptionalString(data, 'startedAt', 0, 100) &&
+             isValidOptionalString(data, 'completedAt', 0, 100) &&
+             (!('durationSeconds' in data) || (data.durationSeconds is number && data.durationSeconds >= 0)) &&
+             (!('stepsCompleted' in data) || (data.stepsCompleted is list && data.stepsCompleted.size() <= 50)) &&
+             (!('escalationTriggered' in data) || data.escalationTriggered is bool) &&
+             isValidOptionalString(data, 'escalationReason', 0, 500) &&
+             (!('sensorObservations' in data) || (data.sensorObservations is list && data.sensorObservations.size() <= 50)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Root Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // 1. Customer Reviews: Public Community Feedback & Life-saving Stories
+    // -------------------------------------------------------------
+    match /customer_reviews/{reviewId} {
+      // Any user (authenticated or unauthenticated guest) can view community feedback
+      allow read: if true;
+
+      // Anyone (authenticated or guest) can create a review with strict field validations
+      allow create: if isValidReview(request.resource.data) &&
+        (
+          !('userId' in request.resource.data) ||
+          request.resource.data.userId == null ||
+          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
+        );
+
+      // Update allowed for valid review data model
+      allow update: if isValidReview(request.resource.data);
+
+      // Only the authoring user or an admin can delete reviews
+      allow delete: if isAuthenticated() &&
+        (isAdmin() || (('userId' in resource.data) && resource.data.userId == request.auth.uid));
+    }
+
+    // -------------------------------------------------------------
+    // 2. User Profiles & Readiness Stats: users/{userId}
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      // Authenticated users can view profiles, or anyone can view public responder profiles
+      allow read: if isAuthenticated() || ('role' in resource.data && resource.data.role == 'responder');
+
+      // Only the user themselves can create their own profile
+      allow create: if isOwner(userId) &&
+        isValidUser(request.resource.data) &&
+        (!('uid' in request.resource.data) || request.resource.data.uid == userId);
+
+      // Only the owner can update their profile; uid and createdAt remain immutable
+      allow update: if isOwner(userId) &&
+        isValidUser(request.resource.data) &&
+        areImmutableFieldsUnchanged(['uid', 'createdAt']);
+
+      // Deletion permitted only by the owner or an admin
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 3. Crowd Commander Squad Sessions: squad_sessions & emergency_sessions
+    // -------------------------------------------------------------
+    match /squad_sessions/{sessionId} {
+      // Real-time bystander QR synchronization with zero-barrier read
+      allow read: if true;
+
+      // Anyone can create an emergency squad session to coordinate crowd roles
+      allow create: if isValidSquadSession(request.resource.data);
+
+      // Anyone (including anonymous bystanders claiming roles) can update roles during an emergency
+      allow update: if isValidSquadSession(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'createdAt']);
+
+      // Only session leader or admin can delete a session
+      allow delete: if isAuthenticated() &&
+        (('leaderId' in resource.data && resource.data.leaderId == request.auth.uid) || isAdmin());
+    }
+
+    match /emergency_sessions/{sessionId} {
+      allow read: if true;
+      allow create: if isValidSquadSession(request.resource.data);
+      allow update: if isValidSquadSession(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'createdAt']);
+      allow delete: if isAuthenticated() &&
+        (('leaderId' in resource.data && resource.data.leaderId == request.auth.uid) || isAdmin());
+    }
+
+    // -------------------------------------------------------------
+    // 4. Paramedic Handover Dockets: paramedic_dockets/{docketId}
+    // -------------------------------------------------------------
+    match /paramedic_dockets/{docketId} {
+      // Offline/zero-login QR scan for inbound 108/112 ambulance EMTs
+      allow read: if true;
+
+      // Anyone can create or update SBAR telemetry dockets during an active incident
+      allow create: if isValidParamedicDocket(request.resource.data);
+
+      allow update: if isValidParamedicDocket(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'createdAt']);
+
+      // Only admins can delete medical telemetry dockets
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 5. Emergency Incident Logs: emergency_incidents & incidents
+    // -------------------------------------------------------------
+    match /emergency_incidents/{incidentId} {
+      // Authenticated users read their own incident records; admins can inspect all
+      allow read: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+
+      // Anyone can log an incident during an emergency
+      allow create: if isValidIncident(request.resource.data) &&
+        (
+          !('userId' in request.resource.data) ||
+          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
+        );
+
+      // Authenticated owners or admins can update incident records
+      allow update: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin()) &&
+        isValidIncident(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'createdAt', 'userId']);
+
+      // Only incident owner or admin can delete incident history
+      allow delete: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+    }
+
+    match /incidents/{incidentId} {
+      allow read: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+
+      allow create: if isValidIncident(request.resource.data) &&
+        (
+          !('userId' in request.resource.data) ||
+          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
+        );
+
+      allow update: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin()) &&
+        isValidIncident(request.resource.data) &&
+        areImmutableFieldsUnchanged(['id', 'createdAt', 'userId']);
+
+      allow delete: if isAuthenticated() &&
+        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+    }
+  }
+}

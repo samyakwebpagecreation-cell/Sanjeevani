@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanjeevani v2.0 — Presentation Deck (Kaleidoscope Junior School 2025-26)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --ink: #0F172A;
+      --ink-muted: #475569;
+      --primary: #0D4A3E;
+      --primary-light: #E6F4F1;
+      --primary-border: #BCE0D7;
+      --accent: #D97706;
+      --accent-light: #FEF3C7;
+      --alert: #DC2626;
+      --alert-light: #FEE2E2;
+      --border: #E2E8F0;
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Ambient Subtle Medical Breathing Glow */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .glow-1 {
+      position: absolute;
+      top: -100px;
+      right: 10%;
+      width: 500px;
+      height: 500px;
+      background: rgba(13, 74, 62, 0.05);
+      border-radius: 50%;
+      filter: blur(140px);
+    }
+    .glow-2 {
+      position: absolute;
+      bottom: -100px;
+      left: 10%;
+      width: 450px;
+      height: 450px;
+      background: rgba(217, 119, 6, 0.04);
+      border-radius: 50%;
+      filter: blur(140px);
+    }
+
+    /* Top Clinical Header */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .school-tag {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+    }
+
+    /* Slides Viewport Container */
+    main {
+      position: relative;
+      z-index: 5;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 48px;
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px 56px;
+      box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.06);
+      animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      min-height: 520px;
+      position: relative;
+    }
+
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+
+    .slide-title {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+
+    .slide-subtitle {
+      font-size: 16px;
+      color: var(--ink-muted);
+      line-height: 1.6;
+      max-width: 820px;
+      font-weight: 500;
+      margin-bottom: 32px;
+    }
+
+    /* Grids & Cards */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--primary-border);
+      background: #FFFFFF;
+      box-shadow: 0 10px 25px -10px rgba(13, 74, 62, 0.08);
+    }
+
+    .card-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 38px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .card-num-alert {
+      color: var(--alert);
+    }
+    .card-num-accent {
+      color: var(--accent);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--ink-muted);
+      line-height: 1.5;
+    }
+
+    /* Comparison Box */
+    .compare-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .box-bad {
+      background: var(--alert-light);
+      border: 1px solid #FECACA;
+      border-radius: 20px;
+      padding: 28px;
+    }
+    .box-bad .badge-red {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      color: #991B1B;
+      background: #FEE2E2;
+      border: 1px solid #FCA5A5;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    .box-good {
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      border-radius: 20px;
+      padding: 28px;
+    }
+    .box-good .badge-green {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--primary);
+      background: #FFFFFF;
+      border: 1px solid var(--primary-border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    /* Literary Quote Box */
+    .quote-box {
+      background: #FFFDF9;
+      border: 2px dashed #FDE68A;
+      border-radius: 24px;
+      padding: 32px 40px;
+      position: relative;
+    }
+    .quote-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.5;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+    .quote-author {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Action CTA */
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: 999px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 10px 20px rgba(13, 74, 62, 0.2);
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      background: #09372E;
+      transform: translateY(-2px);
+      box-shadow: 0 14px 25px rgba(13, 74, 62, 0.25);
+    }
+
+    /* Slogan Banner */
+    .slogan-card {
+      background: linear-gradient(135deg, #09372E, #0D4A3E, #135A4D);
+      color: white;
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      margin-top: 16px;
+      box-shadow: 0 20px 40px rgba(9, 55, 46, 0.3);
+    }
+    .slogan-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #FBBF24;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      margin-top: 8px;
+    }
+
+    /* Bottom Control Bar */
+    footer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 48px;
+      background: rgba(255, 255, 255, 0.9);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+
+    .slide-counter {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-muted);
+    }
+
+    .nav-buttons {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-nav {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-nav:hover {
+      background: var(--bg);
+      border-color: var(--ink-muted);
+    }
+    .btn-nav:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* Progress Bar */
+    .progress-bar-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      z-index: 20;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 9%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow">
+    <div class="glow-1"></div>
+    <div class="glow-2"></div>
+  </div>
+
+  <!-- Clinical Top Bar -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-logo">
+        <img src="/sanjeevani-logo.png" alt="Sanjeevani Emblem">
+      </div>
+      <div>
+        <div class="brand-title">Sanjeevani v2.0</div>
+        <div class="brand-sub">First-Aid Intelligence</div>
+      </div>
+    </div>
+    <div class="school-tag">
+      Seth M.R. Jaipuria School • Kaleidoscope 2025–26 • Day 3
+    </div>
+  </header>
+
+  <!-- Main Slide Canvas -->
+  <main>
+
+    <!-- SLIDE 1 -->
+    <div class="slide active" id="slide-1">
+      <div>
+        <div class="slide-badge">Junior School Innovation • Innospark</div>
+        <h1 class="slide-title" style="font-size: 48px;">The Pre-Hospital Digital Nervous System</h1>
+        <p class="slide-subtitle">
+          Saving lives in the critical first 300 seconds before sirens arrive on congested roads. Designed for students, teachers, and everyday families.
+        </p>
+      </div>
+
+      <div class="grid-3" style="margin: 20px 0;">
+        <div class="card">
+          <div class="card-num">01</div>
+          <div class="card-title">Samyak (Class 8)</div>
+          <div class="card-desc">Vision, Literary Epic & The Numbers of Survival</div>
+        </div>
+        <div class="card">
+          <div class="card-num">02</div>
+          <div class="card-title">Sharav (Class 4)</div>
+          <div class="card-desc">Playground Reality, MythBuster & 110 BPM CPR Cadence</div>
+        </div>
+        <div class="card">
+          <div class="card-num">03</div>
+          <div class="card-title">Ishanvi (Class 4)</div>
+          <div class="card-desc">Calm Architecture, Medication Safety & Jan Aushadhi Savings</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; font-size: 12px; color: var(--ink-muted); font-weight: 600;">
+        <span>✓ AHA 2020 Validated</span> • 
+        <span>✓ 100% Offline Resilience</span> • 
+        <span>✓ Conscious Transformation Philosophy</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide" id="slide-2">
+      <div>
+        <div class="slide-badge">The Pre-Hospital Clinical Crisis</div>
+        <h1 class="slide-title">The 300 Seconds of Truth</h1>
+        <p class="slide-subtitle">
+          Why survival is determined in the gap between the emergency call and the ambulance arrival.
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 4px solid var(--alert);">
+          <div class="card-num card-num-alert">15 – 25 Mins</div>
+          <div class="card-title">Average Indian Ambulance Arrival Time</div>
+          <div class="card-desc">
+            Heavy urban traffic in cities like Lucknow causes ambulance arrival times to far exceed the biological survival window.
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--primary);">
+          <div class="card-num">04:00 Mins</div>
+          <div class="card-title">The Biological Point of No Return</div>
+          <div class="card-desc">
+            Permanent, irreversible brain damage begins within 4 minutes of cardiac arrest. Arterial bleeding takes life in 5 minutes.
+          </div>
+        </div>
+      </div>
+
+      <div style="background: var(--bg); border: 1px solid var(--border); padding: 16px 24px; border-radius: 16px; font-size: 13px; font-weight: 600; color: var(--primary);">
+        ⚡ Critical Principle: The "Golden Hour" of medicine is won or lost in the bystander's first 300 seconds.
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide" id="slide-3">
+      <div>
+        <div class="slide-badge">Ground-Level Sociology</div>
+        <h1 class="slide-title">Accidents Don't Wait for Adults</h1>
+        <p class="slide-subtitle">
+          On school playgrounds and public streets, panic causes frozen inaction or dangerous home remedies.
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">1. The Bystander Paradox</div>
+          <div class="card-desc">
+            When 20 people witness an accident, everyone assumes someone else already called 112, or pulls out a phone to record videos.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">2. Playground Panic</div>
+          <div class="card-desc">
+            Deep cuts, sprains, and asthma attacks happen in schoolyards and corridors before teachers can cross the field.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">3. Dangerous Desi Remedies</div>
+          <div class="card-desc">
+            80% of families panic: smearing toothpaste on burns, raw haldi in cuts, or iron keys in seizures, causing severe tissue sepsis.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide" id="slide-4">
+      <div>
+        <div class="slide-badge">Literary Soul & Ethos</div>
+        <h1 class="slide-title">Lifting the Mountain of Medical Panic</h1>
+        <p class="slide-subtitle">
+          How the epic Ramayana inspired our human-centered software philosophy.
+        </p>
+      </div>
+
+      <div class="quote-box">
+        <div class="quote-text">
+          "On Mount Dronagiri, Hanuman couldn't parse the complex botanical names of thousands of herbs. He didn't abandon Lakshmana—he lifted the entire mountain so that simple, life-saving help arrived in time."
+        </div>
+        <div class="quote-author">— The Ramayana Inspiration Behind Sanjeevani</div>
+      </div>
+
+      <div style="font-size: 14px; color: var(--ink-muted); line-height: 1.6; margin-top: 20px;">
+        Everyday families cannot parse medical Latin or confusing clinical papers under stress. 
+        <strong>Sanjeevani lifts the mountain of medical panic off your shoulders</strong> into calm, clear 1-2-3 steps.
+      </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide" id="slide-5">
+      <div>
+        <div class="slide-badge">Human-Centered Design Blueprint</div>
+        <h1 class="slide-title">Built Like an Earthquake-Resistant Blueprint</h1>
+        <p class="slide-subtitle">
+          Form strictly follows life-saving function: Why calm negative space saves lives during panic.
+        </p>
+      </div>
+
+      <div class="compare-container">
+        <div class="box-bad">
+          <span class="badge-red">Standard Medical Apps (The Problem)</span>
+          <div class="card-title" style="color: #991B1B;">Cognitive Overload</div>
+          <p class="card-desc" style="color: #7F1D1D;">
+            Flashing red sirens, blaring alarms, and walls of Latin text literally trigger cortisol spikes, causing panicked responders to freeze and drop the phone.
+          </p>
+        </div>
+
+        <div class="box-good">
+          <span class="badge-green">Sanjeevani Blueprint (The Solution)</span>
+          <div class="card-title" style="color: var(--primary);">Serene Clinical Negative Space</div>
+          <p class="card-desc" style="color: #064E3B;">
+            Sterile off-white canvas, physical elevation hierarchy, and zero clutter. Presents exactly one life-saving decision at a time so cognitive load drops to zero.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide" id="slide-6">
+      <div>
+        <div class="slide-badge">Clinical Resuscitation Data</div>
+        <h1 class="slide-title">Every Minute Counts: The Numbers Don't Lie</h1>
+        <p class="slide-subtitle">
+          Turning life-saving survival data into simple, actionable instincts for students and teachers.
+        </p>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-num card-num-alert">04 Mins</div>
+          <div class="card-title">Brain Oxygen Window</div>
+          <div class="card-desc">Permanent brain damage starts if circulation is not restored.</div>
+        </div>
+        <div class="card">
+          <div class="card-num card-num-alert">-10% /min</div>
+          <div class="card-title">Survival Drop</div>
+          <div class="card-desc">Every 60-second delay in CPR drops survival chance by 10%.</div>
+        </div>
+        <div class="card">
+          <div class="card-num">110 BPM</div>
+          <div class="card-title">Optimal Cadence</div>
+          <div class="card-desc">Exact compression frequency for optimal AHA guideline cardiac perfusion.</div>
+        </div>
+        <div class="card">
+          <div class="card-num card-num-accent">5 – 6 cm</div>
+          <div class="card-title">Compression Depth</div>
+          <div class="card-desc">Clinical depth to manually pump blood to the brain.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide" id="slide-7">
+      <div>
+        <div class="slide-badge">Family Health Equity</div>
+        <h1 class="slide-title">Medication Rules & The Jan Aushadhi Shield</h1>
+        <p class="slide-subtitle">
+          Preventing household overdoses while saving families thousands on essential chronic medications.
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title" style="color: var(--primary);">🟢 When to Give (Indications)</div>
+          <p class="card-desc">
+            One 300mg chewable Aspirin dissolves blood clots during an adult heart attack, protecting heart tissue before hospital arrival.
+          </p>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--alert); font-weight: 700;">
+            🔴 NEVER under 16: Fatal Reye's Syndrome risk in children; strictly forbidden in dengue fever.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-num card-num-accent">70% – 75%</div>
+          <div class="card-title">Jan Aushadhi Generic Savings</div>
+          <p class="card-desc">
+            Matches expensive branded antibiotics (e.g. Augmentin ₹210) to 100% bio-equivalent PMBJP Jan Aushadhi generic salts (₹55, save 70%–75%) with instant chemist script.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide" id="slide-8">
+      <div>
+        <div class="slide-badge">Zero-Barrier Architecture</div>
+        <h1 class="slide-title">High-Tech Resilience, Zero Barrier to Entry</h1>
+        <p class="slide-subtitle">
+          Built for zero-signal Indian basements, crowded roads, and immediate bystander adoption.
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">100% Offline PWA</div>
+          <div class="card-desc">
+            All 12 protocols, 110 BPM metronome, and SBAR dockets run locally without internet or cell towers.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Zero-Download Crowd QR</div>
+          <div class="card-desc">
+            Passersby scan with their ordinary camera—no app download, no password—to join the rescue squad in 10s.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI Medical Vision</div>
+          <div class="card-desc">
+            On-device camera tracks chest hand placement and verifies injuries in under 2 seconds.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide" id="slide-9">
+      <div>
+        <div class="slide-badge">End-to-End Care Continuum</div>
+        <h1 class="slide-title">From Collapse to Emergency Room</h1>
+        <p class="slide-subtitle">
+          An unbroken chain of survival connecting the panicked bystander directly to the hospital.
+        </p>
+      </div>
+
+      <div class="grid-4">
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--primary);">00:00 — RECOGNITION</div>
+          <div class="card-title" style="margin-top: 6px;">2-Second Triage</div>
+          <div class="card-desc">Voice, text, or camera optical check for consciousness and airway.</div>
+        </div>
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--accent);">00:30 — MOBILIZATION</div>
+          <div class="card-title" style="margin-top: 6px;">110 BPM CPR Pacing</div>
+          <div class="card-desc">Audio-visual compression rhythm + Crowd QR tasks assigned.</div>
+        </div>
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--primary);">04:30 — HANDOVER</div>
+          <div class="card-title" style="margin-top: 6px;">0.5s SBAR QR Docket</div>
+          <div class="card-desc">Paramedics scan complete offline vitals on arrival without shouting.</div>
+        </div>
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: #0284C7;">15:00 — ADMISSION</div>
+          <div class="card-title" style="margin-top: 6px;">Hospital Intake</div>
+          <div class="card-desc">Zero loss of information between bystander, ambulance, and ICU doctor.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10 -->
+    <div class="slide" id="slide-10">
+      <div>
+        <div class="slide-badge">Live System Evaluation</div>
+        <h1 class="slide-title">Experience Sanjeevani Live</h1>
+        <p class="slide-subtitle">
+          Real code. Real devices. Zero exaggeration. Transitioning to the live working web application.
+        </p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 20px;">
+        <div class="card">
+          <div class="card-title">Live Demo Highlights:</div>
+          <div class="card-desc" style="line-height: 1.8;">
+            • <strong>MythBuster:</strong> Toothpaste on burns & raw haldi in cuts live clinical check.<br>
+            • <strong>Cheap Medicines:</strong> Augmentin 625 Jan Aushadhi generic price audit (₹210 → ₹55, 70%–75% savings).<br>
+            • <strong>AI Camera:</strong> 110 BPM metronome beep, sternum reticle & live depth HUD (with Demo Patient toggle).<br>
+            • <strong>Crowd QR:</strong> Instant zero-download bystander mission dispatch.
+          </div>
+        </div>
+        <div class="card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--ink-muted); margin-bottom: 12px;">
+            Deployed Live on Firebase Hosting
+          </div>
+          <a href="https://sanjeevani-v2.web.app" target="_blank" class="btn-action">
+            <span>Launch Live Sanjeevani App →</span>
+          </a>
+          <span style="font-size: 11px; color: var(--ink-muted); margin-top: 10px;">sanjeevani-v2.web.app</span>
+        </div>
+      </div>
+
+      <!-- Stage Offline Safety Backup Cards (In case auditorium Wi-Fi or laptop camera fails) -->
+      <div style="border: 1px dashed var(--border); border-radius: 16px; padding: 14px 18px; background: rgba(14, 90, 80, 0.04); margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary);">
+            🛡️ Stage Offline Safety Backup (Instant visuals if auditorium Wi-Fi or webcam is unavailable)
+          </span>
+          <span style="font-size: 10px; font-weight: 700; color: var(--ink-muted); background: var(--surface); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border);">
+            Stage Safe Mode
+          </span>
+        </div>
+        <div class="grid-2" style="gap: 14px; font-size: 12px;">
+          <!-- CPR HUD Backup Preview Card -->
+          <div style="background: #09090b; color: #fff; border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; color: #F0A85B; font-size: 11px;">🫀 AI Camera • 110 BPM CPR Guide</span>
+              <span style="background: #22C55E; color: #000; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">AHA 2020 PROTOCOL</span>
+            </div>
+            <div style="border: 1px dashed rgba(240,168,91,0.5); border-radius: 8px; padding: 12px; text-align: center; background: rgba(14,90,80,0.25);">
+              <div style="font-size: 12px; font-weight: 800; color: #fff;">STERNUM PLACEMENT: LOWER HALF OF BREASTBONE</div>
+              <div style="font-size: 10px; color: #F0A85B; margin-top: 2px;">◎ Pulsing Acoustic Reticle • 5–6 cm Depth Target Bar</div>
+              <div style="font-size: 18px; font-weight: 900; color: #22C55E; margin-top: 6px;">110 COMPRESSIONS / MINUTE</div>
+            </div>
+          </div>
+          <!-- Augmentin Price Backup Preview Card -->
+          <div style="background: #ffffff; color: var(--ink); border-radius: 12px; padding: 14px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; color: var(--primary); font-size: 11px;">💊 Cheap Medicines • Augmentin 625 Jan Aushadhi Match</span>
+              <span style="background: #0E5A50; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">SAVE 70%–75%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+              <div>
+                <div style="font-size: 10px; color: var(--ink-muted);">Branded MRP (Augmentin 625)</div>
+                <div style="font-size: 14px; font-weight: 800; text-decoration: line-through; color: #DC2626;">₹210 (Strip of 10)</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 10px; color: #047857; font-weight: 700;">PMBJP Jan Aushadhi Generic</div>
+                <div style="font-size: 15px; font-weight: 900; color: #0E5A50;">₹55 (Strip of 10)</div>
+              </div>
+            </div>
+            <div style="margin-top: 6px; font-size: 10px; color: var(--ink-muted);">Salt: Amoxicillin 500mg + Potassium Clavulanate 125mg • Save ~₹155 per strip</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; color: var(--primary); font-weight: 700;">
+        *(Phase 2: The presenters now transition to the live browser window for a 4-minute demonstration)*
+      </div>
+    </div>
+
+    <!-- SLIDE 11 (Presented after returning from App demo) -->
+    <div class="slide" id="slide-11">
+      <div>
+        <div class="slide-badge">Roadmap & Philosophical Commitment</div>
+        <h1 class="slide-title">Our Future Plans for Sanjeevani</h1>
+        <p class="slide-subtitle">
+          Expanding from our school grounds to every community across India. One future plan from each presenter:
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--primary);">SAMYAK'S VISION</div>
+          <div class="card-title" style="margin-top: 4px;">Campus AED Beacons</div>
+          <div class="card-desc">
+            Ultra-Wideband & Bluetooth proximity beacons guiding students straight to automated defibrillators in large schools.
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--accent);">SHARAV'S VISION</div>
+          <div class="card-title" style="margin-top: 4px;">Regional Indian Dialects</div>
+          <div class="card-desc">
+            Voice narration across Hindi, Tamil, Telugu, Bengali, Marathi, and Punjabi so language is never a barrier in crisis.
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 11px; font-weight: 800; color: var(--primary);">ISHANVI'S VISION</div>
+          <div class="card-title" style="margin-top: 4px;">Smartwatch CPR Haptics</div>
+          <div class="card-desc">
+            Vibrations delivering the tactile 110 BPM compression rhythm directly on your wrist during CPR.
+          </div>
+        </div>
+      </div>
+
+      <!-- Grand Slogan Finale Banner -->
+      <div class="slogan-card">
+        <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.85;">
+          Our Conscious Commitment • Seth M.R. Jaipuria School
+        </div>
+        <div class="slogan-text">"SAVE TIME, SAVE LIFE!"</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Control Bar -->
+  <footer>
+    <div class="slide-counter" id="slide-num">Slide 01 of 11</div>
+    <div class="nav-buttons">
+      <button class="btn-nav" id="prev-btn" onclick="prevSlide()" disabled>← Previous</button>
+      <button class="btn-nav" id="next-btn" onclick="nextSlide()">Next →</button>
+      <button class="btn-nav" onclick="toggleFullscreen()" style="margin-left: 12px;">⛶ Fullscreen</button>
+    </div>
+  </footer>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 11;
+
+    function updateSlide() {
+      document.querySelectorAll('.slide').forEach((s, idx) => {
+        s.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      document.getElementById('slide-num').innerText = 
+        `Slide ${currentSlide.toString().padStart(2, '0')} of ${totalSlides.toString().padStart(2, '0')}`;
+
+      document.getElementById('prev-btn').disabled = currentSlide === 1;
+      document.getElementById('next-btn').disabled = currentSlide === totalSlides;
+
+      const progressPct = (currentSlide / totalSlides) * 100;
+      document.getElementById('progress-bar').style.width = `${progressPct}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Keyboard Arrow navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+  </script>
+</body>
+</html>
