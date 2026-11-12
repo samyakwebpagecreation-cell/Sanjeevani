@@ -317,7 +317,7 @@ export const ARCameraView: React.FC<ARCameraViewProps> = ({
 
         ctx.fillStyle = '#F0A85B';
         ctx.font = '600 12px system-ui';
-        ctx.fillText('LOWER HALF OF STERNUM • 110 BPM RHYTHM', centerX, centerY + radius + 22);
+        ctx.fillText('LOWER HALF OF STERNUM • PUSH 5-6 CM', centerX, centerY + radius + 22);
 
       // ==========================================
       // SEVERE BLEEDING PRESSURE TARGET

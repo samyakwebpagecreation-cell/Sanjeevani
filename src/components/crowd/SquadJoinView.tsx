@@ -31,10 +31,13 @@ import {
 import { 
   SquadTaskRole, 
   generateSquadRolesForIncident, 
-  detectIncidentCategory 
+  detectIncidentCategory,
+  localizeBystanderRole
 } from '../../services/bystanderSquadEngine';
 import { audioEngine } from '../../utils/audio';
 import { saveScannedQR, downloadMarkdownFile } from '../../services/qrStorageService';
+import { useAppLanguage } from '../../utils/languageStore';
+import { LanguageSwitcher } from '../common/LanguageSwitcher';
 
 interface SquadJoinViewProps {
   squadId: string;
@@ -42,6 +45,7 @@ interface SquadJoinViewProps {
 }
 
 export const SquadJoinView: React.FC<SquadJoinViewProps> = ({ squadId, onExit }) => {
+  const { lang } = useAppLanguage();
   const [session, setSession] = useState<EmergencySquadSession | null>(null);
   const [showMarkdownDocket, setShowMarkdownDocket] = useState<boolean>(false);
   const [copiedScript, setCopiedScript] = useState(false);
@@ -277,8 +281,9 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
     );
   }
 
-  const allRoles = (Object.values(session.roles || {}) as SquadTaskRole[]).sort((a, b) => a.priority - b.priority);
-  const myRole = (myRoleId && session.roles && session.roles[myRoleId]) ? (session.roles[myRoleId] as SquadTaskRole) : allRoles[0] || null;
+  const rawRoles = (Object.values(session.roles || {}) as SquadTaskRole[]).sort((a, b) => a.priority - b.priority);
+  const allRoles = rawRoles.map((r) => localizeBystanderRole(r, lang));
+  const myRole = (myRoleId ? allRoles.find((r) => r.id === myRoleId) : null) || allRoles[0] || null;
   const completedCount = allRoles.filter((r) => r.status === 'completed').length;
   const activeCount = allRoles.filter((r) => r.status === 'in_progress' || r.status === 'claimed' || r.status === 'completed').length;
   const progressPct = allRoles.length > 0 ? Math.round((completedCount / allRoles.length) * 100) : 0;
@@ -351,6 +356,8 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
 
       {/* MAIN ADAPTIVE CONTAINER (Single column on phone/tablet, 12-col cockpit on laptop/desktop) */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 space-y-5">
+        {/* 5-Language Voice & Protocol Toggle Bar (English · हिंदी · বাংলা · தமிழ் · मराठी) */}
+        <LanguageSwitcher variant="bar" showVoicePreview />
 
         {/* 3. REASSURING BYSTANDER WELCOME & ROLE SWITCHER PILLS */}
         <div className="rounded-3xl bg-white border-2 border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3">
@@ -513,7 +520,7 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
                       </div>
                       <div className="text-center">
                         <span className="text-2xl font-black font-mono text-slate-900 block">
-                          110 BPM
+                          CPR RHYTHM
                         </span>
                         <span className="text-[11px] font-bold text-slate-600">
                           Push Hard & Fast in Center of Chest (5–6 cm depth)
@@ -530,7 +537,7 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
                       }`}
                     >
                       {isMetronomeActive ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-[#F0A85B]" />}
-                      <span>{isMetronomeActive ? 'Pause 110 BPM Audio Metronome' : '🔊 Start 110 BPM CPR Audio Guide'}</span>
+                      <span>{isMetronomeActive ? 'Pause CPR Audio Metronome' : '🔊 Start CPR Audio Guide'}</span>
                     </button>
                   </div>
                 )}

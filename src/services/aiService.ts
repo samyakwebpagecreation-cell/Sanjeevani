@@ -7,6 +7,11 @@
 import { ScenarioQuiz } from '../types';
 import { SCENARIO_QUIZZES } from '../data/practiceData';
 import { FIRST_AID_PROTOCOLS } from '../data/protocols';
+import {
+  getAppLanguage,
+  getAppLanguageMeta,
+  getLocalizedOfflineProtocolMarkdown
+} from '../utils/languageStore';
 
 export interface ModelTier {
   id: string;
@@ -48,10 +53,9 @@ export const FAIL_SAFE_MODELS: ModelTier[] = [
 ];
 
 export const AI_CONFIG = {
-  apiKey: import.meta?.env?.VITE_GEMINI_API_KEY || 'AQ.Ab8RN6J4jhljX9cZc-j5qT2h-GEoyGQmfAw3700a6MItWh9lAA',
   mapsApiKey: import.meta?.env?.VITE_GOOGLE_MAPS_API_KEY || import.meta?.env?.VITE_FIREBASE_API_KEY || 'AIzaSyCgusgSaCLIfuV53u7SQWqapCLc3czj3nQ',
-  arcoreApiKey: import.meta?.env?.VITE_ARCORE_API_KEY || 'AQ.Ab8RN6J4jhljX9cZc-j5qT2h-GEoyGQmfAw3700a6MItWh9lAA',
-  defaultModel: 'gemini-flash-lite-latest',
+  arcoreApiKey: import.meta?.env?.VITE_ARCORE_API_KEY || '',
+  defaultModel: 'gemini-3.8-flash',
   models: FAIL_SAFE_MODELS,
   timeoutPerModelMs: 10000, // Strict 10-second fail-safe limit per model
   projectId: import.meta?.env?.VITE_GOOGLE_PROJECT_ID || 'sanjeevani-v2',
@@ -115,6 +119,7 @@ FORMAT & CLINICAL RULES:
    - **⚠️ Immediate 112 / Hospital Red Flags:**
      * Specific physiological red flags requiring rapid ambulance dispatch or emergency trauma center transfer.
 3. NEVER instruct users to "search Google Maps" or manually search for facilities. Sanjeevani's built-in Emergency Radar automatically locates the nearest hospital with 24/7 cold-chain ASV (anti-venom), pediatric burns, or AEDs and renders the live route directly.
+4. OUTPUT LENGTH & FORMAT CONSTRAINTS: Output at most 6 numbered steps of <= 20 words each, then Avoid, then red flags, with no preamble. Bold only the action verb or key number inside a line (at most one bold phrase per bullet). Do NOT include hospital data in this response.
 `;
 
 /**
@@ -134,21 +139,126 @@ function extractResponseText(candidate: any): string {
   return anyText || '';
 }
 
+export interface OfflineProtocolMatch {
+  matched: boolean;
+  protocolId: string;
+  protocolTitle: string;
+  text: string;
+  isEmergency: boolean;
+}
+
 /**
- * Synthesize an accredited offline first-aid response using local protocol library
+ * Instant Offline Protocol Matcher (<100ms, G.3)
+ * Recognizes the 6 scenario buttons and free-text queries matched by the Tier-4/offline matcher.
+ * Preserves the exact clinical content from FIRST_AID_PROTOCOLS without changing any wording.
  */
-function generateOfflineProtocolResponse(query: string): string {
+export function matchOfflineProtocol(query: string): OfflineProtocolMatch {
   const lower = query.toLowerCase();
-  
-  let matchedProtocol = FIRST_AID_PROTOCOLS['bleeding'];
-  if (lower.includes('cpr') || lower.includes('unconscious') || lower.includes('faint') || lower.includes('breathe') || lower.includes('heart') || lower.includes('collapse')) {
-    matchedProtocol = FIRST_AID_PROTOCOLS['unconscious'] || FIRST_AID_PROTOCOLS['bleeding'];
-  } else if (lower.includes('burn') || lower.includes('scald') || lower.includes('fire')) {
-    matchedProtocol = FIRST_AID_PROTOCOLS['burn'] || FIRST_AID_PROTOCOLS['bleeding'];
-  } else if (lower.includes('chok')) {
-    matchedProtocol = FIRST_AID_PROTOCOLS['choking'] || FIRST_AID_PROTOCOLS['bleeding'];
-  } else if (lower.includes('fracture') || lower.includes('bone') || lower.includes('sprain')) {
-    matchedProtocol = FIRST_AID_PROTOCOLS['fracture'] || FIRST_AID_PROTOCOLS['bleeding'];
+
+  let matchedKey: string | null = null;
+  if (
+    lower.includes('cpr') ||
+    lower.includes('unconscious') ||
+    lower.includes('unresponsive') ||
+    lower.includes('faint') ||
+    lower.includes('breathe') ||
+    lower.includes('breathing') ||
+    lower.includes('heart') ||
+    lower.includes('collapse') ||
+    query.includes('बेहोश') ||
+    query.includes('सांस') ||
+    query.includes('অজ্ঞান') ||
+    query.includes('শ্বাস') ||
+    query.includes('மயக்கம்') ||
+    query.includes('மூச்சு') ||
+    query.includes('बेशुद्ध')
+  ) {
+    matchedKey = 'unconscious';
+  } else if (
+    lower.includes('burn') ||
+    lower.includes('scald') ||
+    lower.includes('fire') ||
+    lower.includes('boiling') ||
+    lower.includes('heatstroke') ||
+    lower.includes('104') ||
+    lower.includes('fever') ||
+    query.includes('जल') ||
+    query.includes('लू') ||
+    query.includes('পোড়া') ||
+    query.includes('হিটস্ট্রোক') ||
+    query.includes('தீக்காயம்') ||
+    query.includes('भाजणे') ||
+    query.includes('उष्माघात')
+  ) {
+    matchedKey = 'burn';
+  } else if (
+    lower.includes('chok') ||
+    lower.includes('coin') ||
+    lower.includes('swallow') ||
+    lower.includes('airway') ||
+    lower.includes('back blow') ||
+    query.includes('गले') ||
+    query.includes('दम') ||
+    query.includes('গলায়') ||
+    query.includes('தொண்டை') ||
+    query.includes('घशात')
+  ) {
+    matchedKey = 'choking';
+  } else if (
+    lower.includes('fracture') ||
+    lower.includes('bone') ||
+    lower.includes('sprain') ||
+    lower.includes('deformity') ||
+    lower.includes('immobilize') ||
+    query.includes('हड्डी') ||
+    query.includes('फ्रैक्चर') ||
+    query.includes('হাড়') ||
+    query.includes('எலும்பு') ||
+    query.includes('हाड')
+  ) {
+    matchedKey = 'fracture';
+  } else if (
+    !lower.includes('paper cut') &&
+    (lower.includes('bleed') ||
+      lower.includes('hemorrhage') ||
+      lower.includes('arterial') ||
+      lower.includes('tourniquet') ||
+      lower.includes('deep cut') ||
+      lower.includes('wound') ||
+      lower.includes('snake') ||
+      lower.includes('bite') ||
+      lower.includes('venom') ||
+      lower.includes('allergy') ||
+      lower.includes('anaphylax') ||
+      lower.includes('shock') ||
+      query.includes('खून') ||
+      query.includes('रक्त') ||
+      query.includes('सांप') ||
+      query.includes('एलर्जी') ||
+      query.includes('রক্ত') ||
+      query.includes('সাপ') ||
+      query.includes('இரத்த') ||
+      query.includes('பாம்பு') ||
+      query.includes('सर्पदंश'))
+  ) {
+    matchedKey = 'bleeding';
+  }
+
+  const effectiveKey = matchedKey || 'bleeding';
+  const matchedProtocol =
+    FIRST_AID_PROTOCOLS[effectiveKey] || FIRST_AID_PROTOCOLS['bleeding'];
+
+  const activeLang = getAppLanguage();
+  const localizedOffline = getLocalizedOfflineProtocolMarkdown(effectiveKey, activeLang);
+
+  if (localizedOffline) {
+    return {
+      matched: matchedKey !== null,
+      protocolId: matchedProtocol.id,
+      protocolTitle: localizedOffline.title,
+      text: localizedOffline.markdown,
+      isEmergency: true
+    };
   }
 
   const stepsText = matchedProtocol.microSteps
@@ -159,9 +269,7 @@ function generateOfflineProtocolResponse(query: string): string {
     .map((trig) => `* ${trig}`)
     .join('\n');
 
-  return `I am Sanjeevani AI Guardian (Offline Clinical Safe-Guard). Here is the verified emergency protocol for **${matchedProtocol.title}**:
-
-- **Immediate Priority:** ${matchedProtocol.shortDesc}
+  const text = `- **Immediate Priority:** ${matchedProtocol.shortDesc}
 
 - **Immediate Action Steps:**
 ${stepsText}
@@ -174,23 +282,200 @@ ${stepsText}
 - **⚠️ Immediate 112 / Hospital Red Flags:**
 ${redFlags}
 * High-speed trauma, severe difficulty breathing, or sudden collapse.`;
+
+  return {
+    matched: matchedKey !== null,
+    protocolId: matchedProtocol.id,
+    protocolTitle: matchedProtocol.title,
+    text,
+    isEmergency: true
+  };
 }
 
 /**
- * Ask the First-Aid Assistant a query with a strict 10-second auto fail-safe cascade
+ * Synthesize an accredited offline first-aid response using local protocol library
  */
-export async function askFirstAidAssistant(
-  userQuery: string,
-  history: { role: 'user' | 'model'; text: string }[] = [],
-  onFailSafeEvent?: (event: FailSafeEvent) => void
-): Promise<AIResponse> {
+export function generateOfflineProtocolResponse(query: string): string {
+  const match = matchOfflineProtocol(query);
+  return `I am Sanjeevani AI Guardian (Offline Clinical Safe-Guard). Here is the verified emergency protocol for **${match.protocolTitle}**:\n\n${match.text}`;
+}
+
+// In-memory LRU response cache for instant repeat queries (G.1 / G.4)
+const responseCache = new Map<string, AIResponse>();
+
+// Warm-up state (G.8)
+let warmedUp = false;
+export function warmUpAIService(): void {
+  if (warmedUp || typeof window === 'undefined') return;
+  warmedUp = true;
+  try {
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = window.location.origin;
+    document.head.appendChild(link);
+  } catch {
+    // ignore
+  }
+  const runWarmup = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    fetch('/api/gemini/warmup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    }).catch(() => {});
+  };
+  if ('requestIdleCallback' in window) {
+    (window as unknown as { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(
+      runWarmup
+    );
+  } else {
+    setTimeout(runWarmup, 400);
+  }
+}
+
+export interface StreamAssistantOptions {
+  userQuery: string;
+  history?: { role: 'user' | 'model'; text: string }[];
+  onToken?: (accumulatedText: string, deltaText: string, tier: ModelTier) => void;
+  onFailSafeEvent?: (event: FailSafeEvent) => void;
+  onTierStart?: (tier: number, modelId: string) => void;
+  onFirstToken?: (tier: number, modelId: string) => void;
+  onTierComplete?: (tier: number, modelId: string) => void;
+  onTierAbortedOrFailed?: (
+    tier: number,
+    modelId: string,
+    status: 'aborted' | 'failed',
+    reason?: string
+  ) => void;
+}
+
+export interface StreamAssistantResult extends AIResponse {
+  timedOutToOffline?: boolean;
+}
+
+/**
+ * Stream the First-Aid Assistant response (G.4, G.5, G.6):
+ * - Starts Tier 1 immediately via SSE (/api/gemini/stream).
+ * - If Tier 1 has produced no token within 3s (3000ms), starts Tier 2 in parallel (hedged request).
+ * - Takes whichever streams its first token first and aborts the loser with AbortController.
+ * - If nothing arrives within 8s (8000ms) total, aborts all requests and returns timedOutToOffline = true.
+ */
+export async function streamFirstAidAssistant(
+  options: StreamAssistantOptions
+): Promise<StreamAssistantResult> {
+  const {
+    userQuery,
+    history = [],
+    onToken,
+    onFailSafeEvent,
+    onTierStart,
+    onFirstToken,
+    onTierComplete,
+    onTierAbortedOrFailed
+  } = options;
+
   const overallStart = Date.now();
   const failSafeLog: string[] = [];
+  const activeLang = getAppLanguage();
+  const langMeta = getAppLanguageMeta(activeLang);
+  const cacheKey = `${activeLang}:${userQuery.trim().toLowerCase()}`;
 
-  for (let i = 0; i < FAIL_SAFE_MODELS.length; i++) {
-    const model = FAIL_SAFE_MODELS[i];
-    const modelStart = Date.now();
+  // Check in-memory cache first when online
+  if (
+    responseCache.has(cacheKey) &&
+    (typeof navigator === 'undefined' || navigator.onLine)
+  ) {
+    const cached = responseCache.get(cacheKey)!;
+    const tier1 = FAIL_SAFE_MODELS[0];
+    onTierStart?.(tier1.tier, tier1.id);
+    onFirstToken?.(tier1.tier, tier1.id);
+    onToken?.(cached.text, cached.text, tier1);
+    onTierComplete?.(tier1.tier, tier1.id);
+    return {
+      ...cached,
+      latencyMs: Math.max(5, Date.now() - overallStart)
+    };
+  }
 
+  // If browser is explicitly offline, return immediately so offline protocol remains primary
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const offlineLatency = Date.now() - overallStart;
+    onFailSafeEvent?.({
+      type: 'offline_fallback',
+      modelId: 'offline-safe-guide',
+      displayName: 'Offline Safe-Guard (Tier 5)',
+      tier: 5,
+      elapsedMs: offlineLatency,
+      reason: 'Browser is offline; showing verified local protocol'
+    });
+    return {
+      text: generateOfflineProtocolResponse(userQuery),
+      modelUsed: 'offline-safe-guide',
+      modelDisplayName: 'Offline Accredited Protocol (Tier 5)',
+      tierUsed: 5,
+      latencyMs: offlineLatency,
+      isEmergency: true,
+      failSafeTriggered: true,
+      failSafeLog: ['Browser offline'],
+      timedOutToOffline: true
+    };
+  }
+
+  const languageDirective =
+    activeLang === 'en'
+      ? 'Respond in clear English.'
+      : `IMPORTANT LANGUAGE REQUIREMENT: Write all step explanations, priority sentences, contraindication bullets, and red flag bullets in ${langMeta.englishName} (${langMeta.nativeName} script). Keep the 4 section headings in English (**Immediate Priority:**, **Immediate Action Steps:**, **CRITICAL CONTRAINDICATIONS (WHAT NOT TO DO):**, **⚠️ Immediate 112 / Hospital Red Flags:**) so the clinical parser formats them properly, while all content inside is in ${langMeta.nativeName}.`;
+
+  const contents: any[] = [
+    {
+      role: 'user',
+      parts: [{ text: `${SANJEEVANI_SYSTEM_PROMPT}\n\n${languageDirective}\n\nUser Question: ${userQuery}` }]
+    }
+  ];
+
+  if (history.length > 0) {
+    history.forEach((msg) => {
+      contents.push({
+        role: msg.role === 'model' ? 'model' : 'user',
+        parts: [{ text: msg.text }]
+      });
+    });
+    contents.push({
+      role: 'user',
+      parts: [{ text: `${userQuery}\n(${languageDirective})` }]
+    });
+  }
+
+  const tier1 = FAIL_SAFE_MODELS[0];
+  const tier2 = FAIL_SAFE_MODELS[1];
+
+  const controller1 = new AbortController();
+  const controller2 = new AbortController();
+
+  let winningTier: ModelTier | null = null;
+  let accumulatedText = '';
+  let settled = false;
+
+  const abortAll = () => {
+    try {
+      controller1.abort();
+    } catch {
+      // ignore
+    }
+    try {
+      controller2.abort();
+    } catch {
+      // ignore
+    }
+  };
+
+  const runSingleStream = async (
+    model: ModelTier,
+    controller: AbortController,
+    otherController: AbortController,
+    otherModel: ModelTier
+  ): Promise<StreamAssistantResult> => {
+    onTierStart?.(model.tier, model.id);
     onFailSafeEvent?.({
       type: 'attempt_start',
       modelId: model.id,
@@ -199,133 +484,278 @@ export async function askFirstAidAssistant(
       elapsedMs: Date.now() - overallStart
     });
 
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${AI_CONFIG.apiKey}`;
-
-      const contents: any[] = [
-        {
-          role: 'user',
-          parts: [{ text: `${SANJEEVANI_SYSTEM_PROMPT}\n\nUser Question: ${userQuery}` }]
-        }
-      ];
-
-      // Add conversation context if provided
-      if (history.length > 0) {
-        history.forEach((msg) => {
-          contents.push({
-            role: msg.role === 'model' ? 'model' : 'user',
-            parts: [{ text: msg.text }]
-          });
-        });
-        contents.push({
-          role: 'user',
-          parts: [{ text: userQuery }]
-        });
-      }
-
-      // Strict 10-second auto-abort controller
-      const controller = new AbortController();
-      const timer = setTimeout(() => {
-        controller.abort(new Error(`Timeout: ${model.id} exceeded 10-second response threshold.`));
-      }, AI_CONFIG.timeoutPerModelMs);
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1024
+    const response = await fetch('/api/gemini/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model.id,
+        contents,
+        generationConfig: {
+          maxOutputTokens: 700,
+          thinkingConfig: {
+            thinkingBudget: 0
           }
-        }),
-        signal: controller.signal
-      });
+        }
+      }),
+      signal: controller.signal
+    });
 
-      clearTimeout(timer);
+    if (!response.ok || !response.body) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${response.status}`);
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.error?.message || `API error (${response.status})`);
-      }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let localText = '';
+    let sawFirstToken = false;
 
-      const data = await response.json();
-      const firstCandidate = data?.candidates?.[0];
-      const reply = extractResponseText(firstCandidate);
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
 
-      if (!reply) {
-        throw new Error('Received empty response from model.');
-      }
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
 
-      const latencyMs = Date.now() - overallStart;
-      const lowerReply = reply.toLowerCase();
-      const isEmergency = lowerReply.includes('112') || lowerReply.includes('emergency') || lowerReply.includes('call for help');
+      for (const evt of events) {
+        const line = evt.trim();
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
 
-      onFailSafeEvent?.({
-        type: 'success',
-        modelId: model.id,
-        displayName: model.displayName,
-        tier: model.tier,
-        elapsedMs: latencyMs
-      });
+        let parsed: { text?: string; error?: string } = {};
+        try {
+          parsed = JSON.parse(payload);
+        } catch {
+          continue;
+        }
 
-      return {
-        text: reply,
-        modelUsed: model.id,
-        modelDisplayName: model.displayName,
-        tierUsed: model.tier,
-        latencyMs,
-        isEmergency,
-        failSafeTriggered: i > 0,
-        failSafeLog
-      };
-    } catch (err: any) {
-      const elapsed = Date.now() - modelStart;
-      const isTimeout = err?.name === 'AbortError' || err?.message?.includes('Timeout') || elapsed >= 9900;
-      const reasonMsg = isTimeout 
-        ? `Tier ${model.tier} (${model.id}) reached 10s limit without response`
-        : `Tier ${model.tier} (${model.id}) failed: ${err?.message || 'Error'}`;
+        if (parsed.error) {
+          throw new Error(parsed.error);
+        }
 
-      failSafeLog.push(reasonMsg);
-      console.warn(`[Auto Fail-Safe] ${reasonMsg}. Switching to next tier...`);
+        const delta = parsed.text || '';
+        if (!delta) continue;
 
-      const nextModel = FAIL_SAFE_MODELS[i + 1];
-      if (nextModel) {
-        onFailSafeEvent?.({
-          type: isTimeout ? 'timeout_switch' : 'error_switch',
-          modelId: nextModel.id,
-          displayName: nextModel.displayName,
-          tier: nextModel.tier,
-          elapsedMs: Date.now() - overallStart,
-          reason: isTimeout ? 'Response took >10s; routing to next AI tier' : (err?.message || 'Connection error')
-        });
+        // First token arbitration between hedged Tier 1 and Tier 2
+        if (!winningTier) {
+          winningTier = model;
+          try {
+            otherController.abort();
+            onTierAbortedOrFailed?.(otherModel.tier, otherModel.id, 'aborted', 'Hedged loser aborted');
+          } catch {
+            // ignore
+          }
+        } else if (winningTier.tier !== model.tier) {
+          controller.abort();
+          return Promise.reject(new Error('Aborted as hedged loser'));
+        }
+
+        if (!sawFirstToken) {
+          sawFirstToken = true;
+          onFirstToken?.(model.tier, model.id);
+        }
+
+        localText += delta;
+        accumulatedText = localText;
+        onToken?.(localText, delta, model);
       }
     }
-  }
 
-  // Tier 5: Accredited Offline Emergency Fallback
-  const offlineLatency = Date.now() - overallStart;
-  onFailSafeEvent?.({
-    type: 'offline_fallback',
-    modelId: 'offline-safe-guide',
-    displayName: 'Offline Safe-Guard (Tier 5)',
-    tier: 5,
-    elapsedMs: offlineLatency,
-    reason: 'All remote AI tiers timed out (>10s) or offline; activated local protocol synthesis'
-  });
+    if (!localText.trim()) {
+      throw new Error('Empty stream response');
+    }
 
-  return {
-    text: generateOfflineProtocolResponse(userQuery),
-    modelUsed: 'offline-safe-guide',
-    modelDisplayName: 'Offline Accredited Protocol (Tier 5)',
-    tierUsed: 5,
-    latencyMs: offlineLatency,
-    isEmergency: true,
-    failSafeTriggered: true,
-    failSafeLog: [...failSafeLog, 'Active offline clinical fallback']
+    const latencyMs = Date.now() - overallStart;
+    const lowerReply = localText.toLowerCase();
+    const isEmergency =
+      lowerReply.includes('112') ||
+      lowerReply.includes('emergency') ||
+      lowerReply.includes('call for help');
+
+    onTierComplete?.(model.tier, model.id);
+    onFailSafeEvent?.({
+      type: 'success',
+      modelId: model.id,
+      displayName: model.displayName,
+      tier: model.tier,
+      elapsedMs: latencyMs
+    });
+
+    const result: StreamAssistantResult = {
+      text: localText.trim(),
+      modelUsed: model.id,
+      modelDisplayName: model.displayName,
+      tierUsed: model.tier,
+      latencyMs,
+      isEmergency,
+      failSafeTriggered: model.tier > 1,
+      failSafeLog,
+      timedOutToOffline: false
+    };
+
+    responseCache.set(cacheKey, result);
+    return result;
   };
+
+  return new Promise<StreamAssistantResult>((resolve) => {
+    let tier2Started = false;
+    let activeCount = 1;
+
+    // 8s strict total timeout (G.5)
+    const deadlineTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      abortAll();
+
+      // If we already streamed meaningful partial text before 8s, keep what streamed
+      if (accumulatedText.trim().length > 40 && winningTier) {
+        onTierComplete?.(winningTier.tier, winningTier.id);
+        resolve({
+          text: accumulatedText.trim(),
+          modelUsed: winningTier.id,
+          modelDisplayName: winningTier.displayName,
+          tierUsed: winningTier.tier,
+          latencyMs: Date.now() - overallStart,
+          isEmergency: true,
+          failSafeTriggered: true,
+          failSafeLog: [...failSafeLog, '8s deadline reached with partial stream'],
+          timedOutToOffline: false
+        });
+        return;
+      }
+
+      onTierAbortedOrFailed?.(tier1.tier, tier1.id, 'aborted', '8s total timeout');
+      if (tier2Started) {
+        onTierAbortedOrFailed?.(tier2.tier, tier2.id, 'aborted', '8s total timeout');
+      }
+
+      const offlineLatency = Date.now() - overallStart;
+      onFailSafeEvent?.({
+        type: 'offline_fallback',
+        modelId: 'offline-safe-guide',
+        displayName: 'Offline Safe-Guard (Tier 5)',
+        tier: 5,
+        elapsedMs: offlineLatency,
+        reason: 'AI response exceeded 8s limit; showing verified offline protocol'
+      });
+
+      resolve({
+        text: generateOfflineProtocolResponse(userQuery),
+        modelUsed: 'offline-safe-guide',
+        modelDisplayName: 'Offline Accredited Protocol (Tier 5)',
+        tierUsed: 5,
+        latencyMs: offlineLatency,
+        isEmergency: true,
+        failSafeTriggered: true,
+        failSafeLog: [...failSafeLog, '8s total timeout; offline fallback active'],
+        timedOutToOffline: true
+      });
+    }, 8000);
+
+    const handleFailure = (tierModel: ModelTier, err: any) => {
+      if (settled) return;
+      const reason = err?.message || 'Stream error';
+      failSafeLog.push(`Tier ${tierModel.tier} failed: ${reason}`);
+      onTierAbortedOrFailed?.(
+        tierModel.tier,
+        tierModel.id,
+        reason.includes('Abort') || reason.includes('loser') ? 'aborted' : 'failed',
+        reason
+      );
+
+      // If Tier 1 failed before 3s and Tier 2 hasn't started yet, start Tier 2 immediately!
+      if (tierModel.tier === 1 && !tier2Started && !winningTier) {
+        startTier2('Tier 1 error; hedging Tier 2 immediately');
+      }
+
+      activeCount--;
+      if (activeCount <= 0 && !settled) {
+        settled = true;
+        clearTimeout(deadlineTimer);
+        clearTimeout(hedgeTimer);
+        const offlineLatency = Date.now() - overallStart;
+        onFailSafeEvent?.({
+          type: 'offline_fallback',
+          modelId: 'offline-safe-guide',
+          displayName: 'Offline Safe-Guard (Tier 5)',
+          tier: 5,
+          elapsedMs: offlineLatency,
+          reason: 'All remote AI streams failed; showing verified offline protocol'
+        });
+        resolve({
+          text: generateOfflineProtocolResponse(userQuery),
+          modelUsed: 'offline-safe-guide',
+          modelDisplayName: 'Offline Accredited Protocol (Tier 5)',
+          tierUsed: 5,
+          latencyMs: offlineLatency,
+          isEmergency: true,
+          failSafeTriggered: true,
+          failSafeLog,
+          timedOutToOffline: true
+        });
+      }
+    };
+
+    const startTier2 = (reasonText: string) => {
+      if (tier2Started || settled || winningTier) return;
+      tier2Started = true;
+      activeCount++;
+      onFailSafeEvent?.({
+        type: 'timeout_switch',
+        modelId: tier2.id,
+        displayName: tier2.displayName,
+        tier: tier2.tier,
+        elapsedMs: Date.now() - overallStart,
+        reason: reasonText
+      });
+
+      runSingleStream(tier2, controller2, controller1, tier1)
+        .then((res) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(deadlineTimer);
+          clearTimeout(hedgeTimer);
+          resolve(res);
+        })
+        .catch((err) => handleFailure(tier2, err));
+    };
+
+    // 3s hedge timer: if Tier 1 has produced no token within 3s, start Tier 2 in parallel (G.5)
+    const hedgeTimer = setTimeout(() => {
+      if (!winningTier && !settled) {
+        startTier2('Tier 1 produced no token in 3s; starting hedged Tier 2 in parallel');
+      }
+    }, 3000);
+
+    // Start Tier 1 immediately
+    runSingleStream(tier1, controller1, controller2, tier2)
+      .then((res) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(deadlineTimer);
+        clearTimeout(hedgeTimer);
+        resolve(res);
+      })
+      .catch((err) => handleFailure(tier1, err));
+  });
+}
+
+/**
+ * Ask the First-Aid Assistant a query (delegates to streamFirstAidAssistant)
+ */
+export async function askFirstAidAssistant(
+  userQuery: string,
+  history: { role: 'user' | 'model'; text: string }[] = [],
+  onFailSafeEvent?: (event: FailSafeEvent) => void
+): Promise<AIResponse> {
+  return streamFirstAidAssistant({
+    userQuery,
+    history,
+    onFailSafeEvent
+  });
 }
 
 /**
@@ -385,7 +815,7 @@ Return STRICT RAW JSON only matching this schema with NO markdown code fences:
 
   for (const model of FAIL_SAFE_MODELS) {
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${AI_CONFIG.apiKey}`;
+      const endpoint = '/api/gemini/generate';
 
       const controller = new AbortController();
       const timer = setTimeout(() => {
@@ -398,6 +828,7 @@ Return STRICT RAW JSON only matching this schema with NO markdown code fences:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          model: model.id,
           contents: [
             {
               parts: [
@@ -561,11 +992,12 @@ OUTPUT STRICTLY AS VALID RAW JSON with no code fences or extra text:
 
   for (const model of modelsToTry) {
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${AI_CONFIG.apiKey}`;
+      const endpoint = '/api/gemini/generate';
       const response = await fetchWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model,
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,

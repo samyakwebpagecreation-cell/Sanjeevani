@@ -1,395 +1,296 @@
 rules_version = '2';
 
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: customer_reviews
-// Document ID: Auto-generated or client UUID
-// Fields:
-//   - authorName: string (required, 1-100 chars) - Submitter name/alias
-//   - story: string (required, 1-2000 chars) - Lifesaving testimonial or feedback
-//   - rating: number (required, 1-5) - Star rating
-//   - role: string (optional, 0-100 chars) - Submitter role/background
-//   - categoryTag: string (optional, 0-100 chars) - Emergency/feature category
-//   - badge: string (optional, 0-100 chars) - Community recognition tag
-//   - userId: string (optional, 1-128 chars, immutable) - Submitter user ID
-//   - isUserSubmitted: bool (optional) - Client-submitted indicator
-//   - id: string (optional, 1-128 chars, immutable) - Review identifier
-//   - date: string (optional, 0-50 chars) - Display timestamp string
-//   - createdAt: timestamp | string (optional, immutable)
-//
-// Collection: users/{userId}
-// Document ID: Matches Firebase Auth UID
-// Fields:
-//   - uid: string (optional, immutable, must match {userId})
-//   - fullName: string (optional, 1-100 chars) - Responder/user display name
-//   - role: string (required, 'student' | 'parent' | 'responder' | 'teacher')
-//   - email: string (optional, valid email format)
-//   - phone: string (optional, 0-25 chars)
-//   - stats: map (optional) - XP, level, drills, readiness metrics
-//   - bookmarks: list (optional, max 100 items of string <= 50 chars)
-//   - createdAt: timestamp | string (optional, immutable)
-//   - updatedAt: timestamp | string (optional)
-//
-// Collection: squad_sessions/{sessionId} & emergency_sessions/{sessionId}
-// Document ID: {sessionId} (6-character code or UUID)
-// Fields:
-//   - id: string (required, 1-64 chars, immutable)
-//   - status: string (required, 'active' | 'resolved' | 'cancelled')
-//   - leaderId: string (optional, 0-64 chars)
-//   - leaderName: string (optional, 0-100 chars)
-//   - protocolId: string (optional, 0-64 chars)
-//   - protocolTitle: string (optional, 0-100 chars)
-//   - locationNotes: string (optional, 0-500 chars)
-//   - locationAddress: string (optional, 0-500 chars)
-//   - incidentSummary: string (optional, 0-1000 chars)
-//   - urgencyLevel: string (optional, 'CRITICAL_112' | 'URGENT' | 'MONITOR')
-//   - gpsCoordinates: map (optional) - lat, lng coordinates
-//   - nearestHospital: map (optional) - Hospital dispatch metadata
-//   - roles: map (optional) - Real-time bystander task assignments
-//   - bystanderCount: number (optional, >= 0, <= 1000)
-//   - qrSvg: string (optional, max 50000 chars)
-//   - joinUrl: string (optional, max 500 chars)
-//   - photoPreviewUrl: string (optional, max 1000 chars)
-//   - createdAt: timestamp | string (optional, immutable)
-//   - updatedAt: timestamp | string (optional)
-//
-// Collection: paramedic_dockets/{docketId}
-// Document ID: {docketId} (SBAR telemetry transfer docket)
-// Fields:
-//   - id: string (required, 1-64 chars, immutable)
-//   - incidentId: string (optional, 0-64 chars)
-//   - patientStatus: string (optional, 0-200 chars)
-//   - responderName: string (optional, 0-100 chars)
-//   - protocolTitle: string (optional, 0-100 chars)
-//   - startedAt: string (optional, 0-100 chars)
-//   - completedAt: string (optional, 0-100 chars)
-//   - totalDurationSeconds: number (optional, >= 0)
-//   - cprDurationSeconds: number (optional, >= 0)
-//   - cprCyclesCount: number (optional, >= 0)
-//   - cprAverageAccuracy: number (optional, >= 0, <= 100)
-//   - coolingMinutes: number (optional, >= 0)
-//   - pressureMinutes: number (optional, >= 0)
-//   - stepsCompleted: list (optional, max 50 strings <= 200 chars)
-//   - vitalSignsObservations: list (optional, max 50 strings <= 200 chars)
-//   - nearestHospitalDispatched: string (optional, 0-200 chars)
-//   - qrPayload: string (optional, max 10000 chars)
-//   - createdAt: timestamp | string (optional, immutable)
-//
-// Collection: emergency_incidents/{incidentId} & incidents/{incidentId}
-// Document ID: {incidentId}
-// Fields:
-//   - id: string (required, 1-64 chars, immutable)
-//   - userId: string (optional, 0-64 chars, immutable)
-//   - protocolId: string (required, 1-64 chars)
-//   - protocolTitle: string (required, 1-100 chars)
-//   - startedAt: string (optional, 0-100 chars)
-//   - completedAt: string (optional, 0-100 chars)
-//   - durationSeconds: number (optional, >= 0)
-//   - stepsCompleted: list (optional, max 50 strings <= 200 chars)
-//   - escalationTriggered: bool (optional)
-//   - escalationReason: string (optional, 0-500 chars)
-//   - sensorObservations: list (optional, max 50 strings <= 200 chars)
-//   - createdAt: timestamp | string (optional, immutable)
-//
-// ===============================================================
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ===============================================================
     // Helper Functions
+    // Single source of truth for school roles: /schools/{schoolId}/members/{uid}
+    // Never trust client-writable profile role fields or custom role claims.
     // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && (
-        ('admin' in request.auth.token && request.auth.token.admin == true) ||
-        ('role' in request.auth.token && request.auth.token.role == 'admin')
-      );
+    function isEmailVerified() {
+      return isAuthenticated() && request.auth.token.email_verified == true;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isPlatformTeam() {
+      return isAuthenticated() && request.auth.token.platform == true;
     }
 
-    function hasRequiredFields(data, fields) {
-      return data.keys().hasAll(fields);
+    function memberPath(schoolId) {
+      return /databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid);
     }
 
-    function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    function isSchoolMember(schoolId) {
+      return isAuthenticated() && exists(memberPath(schoolId));
     }
 
-    function isValidOptionalString(data, field, minLen, maxLen) {
-      return !(field in data) ||
-             data[field] == null ||
-             (data[field] is string &&
-              data[field].size() >= minLen &&
-              data[field].size() <= maxLen);
+    function isSchoolAdmin(schoolId) {
+      return isEmailVerified() &&
+        isSchoolMember(schoolId) &&
+        get(memberPath(schoolId)).data.role == 'admin';
     }
 
-    function isValidEmail(email) {
-      return email is string &&
-             email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    function isSchoolTeacherOrAdmin(schoolId) {
+      return isEmailVerified() &&
+        isSchoolMember(schoolId) &&
+        (get(memberPath(schoolId)).data.role == 'teacher' ||
+         get(memberPath(schoolId)).data.role == 'admin');
     }
 
-    // ===============================================================
-    // Domain Validators (Applied to both create and update)
-    // ===============================================================
-
-    function isValidReview(data) {
-      return hasRequiredFields(data, ['authorName', 'story', 'rating']) &&
-             data.authorName is string &&
-             data.authorName.size() >= 1 &&
-             data.authorName.size() <= 100 &&
-             data.story is string &&
-             data.story.size() >= 1 &&
-             data.story.size() <= 2000 &&
-             data.rating is number &&
-             data.rating >= 1 &&
-             data.rating <= 5 &&
-             isValidOptionalString(data, 'role', 0, 100) &&
-             isValidOptionalString(data, 'categoryTag', 0, 100) &&
-             isValidOptionalString(data, 'badge', 0, 100) &&
-             isValidOptionalString(data, 'userId', 1, 128) &&
-             isValidOptionalString(data, 'userEmail', 0, 128) &&
-             isValidOptionalString(data, 'id', 1, 128) &&
-             isValidOptionalString(data, 'date', 0, 50) &&
-             isValidOptionalString(data, 'platform', 0, 50) &&
-             (!('verified' in data) || data.verified == null || data.verified is bool) &&
-             (!('isUserSubmitted' in data) || data.isUserSubmitted == null || data.isUserSubmitted is bool) &&
-             (!('createdAt' in data) || data.createdAt == null || data.createdAt is timestamp || data.createdAt is string);
+    function isTeacherOfClass(schoolId, classId) {
+      return isEmailVerified() &&
+        isSchoolMember(schoolId) &&
+        get(memberPath(schoolId)).data.role == 'teacher' &&
+        classId is string &&
+        exists(/databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)) &&
+        get(/databases/$(database)/documents/schools/$(schoolId)/classes/$(classId)).data.teacherUid == request.auth.uid;
     }
 
-    function isValidUser(data) {
-      return (!('role' in data) || (data.role in ['student', 'parent', 'responder', 'teacher'])) &&
-             isValidOptionalString(data, 'uid', 1, 128) &&
-             isValidOptionalString(data, 'fullName', 1, 100) &&
-             (!('email' in data) || isValidEmail(data.email)) &&
-             isValidOptionalString(data, 'phone', 0, 25) &&
-             (!('stats' in data) || data.stats is map) &&
-             (!('bookmarks' in data) || (data.bookmarks is list && data.bookmarks.size() <= 100)) &&
-             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string);
-    }
-
-    function isValidSquadSession(data) {
-      return hasRequiredFields(data, ['id', 'status']) &&
-             data.id is string &&
-             data.id.size() >= 1 &&
-             data.id.size() <= 64 &&
-             data.status in ['active', 'resolved', 'cancelled'] &&
-             isValidOptionalString(data, 'leaderId', 0, 64) &&
-             isValidOptionalString(data, 'leaderName', 0, 100) &&
-             isValidOptionalString(data, 'protocolId', 0, 64) &&
-             isValidOptionalString(data, 'protocolTitle', 0, 100) &&
-             isValidOptionalString(data, 'locationNotes', 0, 500) &&
-             isValidOptionalString(data, 'locationAddress', 0, 500) &&
-             isValidOptionalString(data, 'incidentSummary', 0, 1000) &&
-             (!('urgencyLevel' in data) || data.urgencyLevel in ['CRITICAL_112', 'URGENT', 'MONITOR']) &&
-             (!('gpsCoordinates' in data) || data.gpsCoordinates is map) &&
-             (!('nearestHospital' in data) || data.nearestHospital is map) &&
-             (!('roles' in data) || data.roles is map) &&
-             (!('bystanderCount' in data) || (data.bystanderCount is number && data.bystanderCount >= 0 && data.bystanderCount <= 1000)) &&
-             isValidOptionalString(data, 'qrSvg', 0, 50000) &&
-             isValidOptionalString(data, 'joinUrl', 0, 500) &&
-             isValidOptionalString(data, 'photoPreviewUrl', 0, 1000) &&
-             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string) &&
-             (!('updatedAt' in data) || data.updatedAt is timestamp || data.updatedAt is string);
-    }
-
-    function isValidParamedicDocket(data) {
-      return hasRequiredFields(data, ['id']) &&
-             data.id is string &&
-             data.id.size() >= 1 &&
-             data.id.size() <= 64 &&
-             isValidOptionalString(data, 'incidentId', 0, 64) &&
-             isValidOptionalString(data, 'patientStatus', 0, 200) &&
-             isValidOptionalString(data, 'responderName', 0, 100) &&
-             isValidOptionalString(data, 'protocolTitle', 0, 100) &&
-             isValidOptionalString(data, 'startedAt', 0, 100) &&
-             isValidOptionalString(data, 'completedAt', 0, 100) &&
-             (!('totalDurationSeconds' in data) || (data.totalDurationSeconds is number && data.totalDurationSeconds >= 0)) &&
-             (!('cprDurationSeconds' in data) || (data.cprDurationSeconds is number && data.cprDurationSeconds >= 0)) &&
-             (!('cprCyclesCount' in data) || (data.cprCyclesCount is number && data.cprCyclesCount >= 0)) &&
-             (!('cprAverageAccuracy' in data) || (data.cprAverageAccuracy is number && data.cprAverageAccuracy >= 0 && data.cprAverageAccuracy <= 100)) &&
-             (!('coolingMinutes' in data) || (data.coolingMinutes is number && data.coolingMinutes >= 0)) &&
-             (!('pressureMinutes' in data) || (data.pressureMinutes is number && data.pressureMinutes >= 0)) &&
-             (!('stepsCompleted' in data) || (data.stepsCompleted is list && data.stepsCompleted.size() <= 50)) &&
-             (!('vitalSignsObservations' in data) || (data.vitalSignsObservations is list && data.vitalSignsObservations.size() <= 50)) &&
-             isValidOptionalString(data, 'nearestHospitalDispatched', 0, 200) &&
-             isValidOptionalString(data, 'qrPayload', 0, 10000) &&
-             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
-    }
-
-    function isValidIncident(data) {
-      return hasRequiredFields(data, ['id', 'protocolId', 'protocolTitle']) &&
-             data.id is string &&
-             data.id.size() >= 1 &&
-             data.id.size() <= 64 &&
-             data.protocolId is string &&
-             data.protocolId.size() >= 1 &&
-             data.protocolId.size() <= 64 &&
-             data.protocolTitle is string &&
-             data.protocolTitle.size() >= 1 &&
-             data.protocolTitle.size() <= 100 &&
-             isValidOptionalString(data, 'userId', 0, 64) &&
-             isValidOptionalString(data, 'startedAt', 0, 100) &&
-             isValidOptionalString(data, 'completedAt', 0, 100) &&
-             (!('durationSeconds' in data) || (data.durationSeconds is number && data.durationSeconds >= 0)) &&
-             (!('stepsCompleted' in data) || (data.stepsCompleted is list && data.stepsCompleted.size() <= 50)) &&
-             (!('escalationTriggered' in data) || data.escalationTriggered is bool) &&
-             isValidOptionalString(data, 'escalationReason', 0, 500) &&
-             (!('sensorObservations' in data) || (data.sensorObservations is list && data.sensorObservations.size() <= 50)) &&
-             (!('createdAt' in data) || data.createdAt is timestamp || data.createdAt is string);
+    function isValidDrillEventType(evType) {
+      return evType in [
+        'role_claimed',
+        'call112_confirmed',
+        'cpr_started',
+        'cpr_rate_sample',
+        'cpr_stopped',
+        'aed_confirmed',
+        'crowd_controlled',
+        'handover_generated',
+        'run_ended'
+      ];
     }
 
     // ===============================================================
-    // Collection Rules
+    // 0. USER PROFILES, ONBOARDING DRAFTS & MEMBERSHIP INDEX
+    // Client-writable onboardingDrafts hold workflow intent ONLY and
+    // are never consulted for school permissions.
     // ===============================================================
-
-    // Root Default Deny
-    match /{document=**} {
-      allow read, write: if false;
+    match /onboardingDrafts/{uid} {
+      allow get, create, update: if isAuthenticated() &&
+        request.auth.uid == uid &&
+        request.resource.data.intendedRole in ['teacher', 'school_admin', 'student'];
+      allow list, delete: if false;
     }
 
-    // -------------------------------------------------------------
-    // 1. Customer Reviews: Public Community Feedback & Life-saving Stories
-    // -------------------------------------------------------------
-    match /customer_reviews/{reviewId} {
-      // Any user (authenticated or unauthenticated guest) can view community feedback
-      allow read: if true;
+    match /users/{uid} {
+      allow get: if isAuthenticated() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update: if isAuthenticated() &&
+        request.auth.uid == uid &&
+        !('role' in request.resource.data) &&
+        !('platform' in request.resource.data);
+      allow delete: if false;
 
-      // Anyone (authenticated or guest) can create a review with strict field validations
-      allow create: if isValidReview(request.resource.data) &&
-        (
-          !('userId' in request.resource.data) ||
-          request.resource.data.userId == null ||
-          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
-        );
-
-      // Update allowed for valid review data model
-      allow update: if isValidReview(request.resource.data);
-
-      // Only the authoring user or an admin can delete reviews
-      allow delete: if isAuthenticated() &&
-        (isAdmin() || (('userId' in resource.data) && resource.data.userId == request.auth.uid));
+      match /memberships/{schoolId} {
+        allow get, list: if isAuthenticated() && request.auth.uid == uid;
+        allow create, update: if isEmailVerified() &&
+          (request.auth.uid == uid || isSchoolAdmin(schoolId));
+        allow delete: if isSchoolAdmin(schoolId);
+      }
     }
 
-    // -------------------------------------------------------------
-    // 2. User Profiles & Readiness Stats: users/{userId}
-    // -------------------------------------------------------------
-    match /users/{userId} {
-      // Authenticated users can view profiles, or anyone can view public responder profiles
-      allow read: if isAuthenticated() || ('role' in resource.data && resource.data.role == 'responder');
-
-      // Only the user themselves can create their own profile
-      allow create: if isOwner(userId) &&
-        isValidUser(request.resource.data) &&
-        (!('uid' in request.resource.data) || request.resource.data.uid == userId);
-
-      // Only the owner can update their profile; uid and createdAt remain immutable
-      allow update: if isOwner(userId) &&
-        isValidUser(request.resource.data) &&
-        areImmutableFieldsUnchanged(['uid', 'createdAt']);
-
-      // Deletion permitted only by the owner or an admin
-      allow delete: if isOwner(userId) || isAdmin();
-    }
-
-    // -------------------------------------------------------------
-    // 3. Crowd Commander Squad Sessions: squad_sessions & emergency_sessions
-    // -------------------------------------------------------------
+    // ===============================================================
+    // 1. REAL EMERGENCY COLLECTIONS (Untouched safety invariant #1)
+    // A session without mode:"drill" is always treated as real.
+    // If mode == "drill", it MUST include schoolId, drillId, and runId.
+    // ===============================================================
     match /squad_sessions/{sessionId} {
-      // Real-time bystander QR synchronization with zero-barrier read
-      allow read: if true;
-
-      // Anyone can create an emergency squad session to coordinate crowd roles
-      allow create: if isValidSquadSession(request.resource.data);
-
-      // Anyone (including anonymous bystanders claiming roles) can update roles during an emergency
-      allow update: if isValidSquadSession(request.resource.data) &&
-        areImmutableFieldsUnchanged(['id', 'createdAt']);
-
-      // Only session leader or admin can delete a session
-      allow delete: if isAuthenticated() &&
-        (('leaderId' in resource.data && resource.data.leaderId == request.auth.uid) || isAdmin());
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if
+        (!('mode' in request.resource.data) ||
+          (request.resource.data.mode == 'drill' &&
+           request.resource.data.schoolId is string &&
+           request.resource.data.drillId is string &&
+           request.resource.data.runId is string));
+      allow delete: if false;
     }
 
-    match /emergency_sessions/{sessionId} {
-      allow read: if true;
-      allow create: if isValidSquadSession(request.resource.data);
-      allow update: if isValidSquadSession(request.resource.data) &&
-        areImmutableFieldsUnchanged(['id', 'createdAt']);
-      allow delete: if isAuthenticated() &&
-        (('leaderId' in resource.data && resource.data.leaderId == request.auth.uid) || isAdmin());
-    }
-
-    // -------------------------------------------------------------
-    // 4. Paramedic Handover Dockets: paramedic_dockets/{docketId}
-    // -------------------------------------------------------------
     match /paramedic_dockets/{docketId} {
-      // Offline/zero-login QR scan for inbound 108/112 ambulance EMTs
-      allow read: if true;
-
-      // Anyone can create or update SBAR telemetry dockets during an active incident
-      allow create: if isValidParamedicDocket(request.resource.data);
-
-      allow update: if isValidParamedicDocket(request.resource.data) &&
-        areImmutableFieldsUnchanged(['id', 'createdAt']);
-
-      // Only admins can delete medical telemetry dockets
-      allow delete: if isAdmin();
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if true;
+      allow delete: if false;
     }
 
-    // -------------------------------------------------------------
-    // 5. Emergency Incident Logs: emergency_incidents & incidents
-    // -------------------------------------------------------------
-    match /emergency_incidents/{incidentId} {
-      // Authenticated users read their own incident records; admins can inspect all
-      allow read: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+    // ===============================================================
+    // 2. DRILL MODE SCHOOL HIERARCHY (/schools/{schoolId}/...)
+    // ===============================================================
+    match /schools/{schoolId} {
+      allow get: if isSchoolMember(schoolId);
+      allow list: if false; // Never list all schools on the client; directory search is server-side only
+      allow create: if isEmailVerified() &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 140 &&
+        request.resource.data.verificationStatus in ['unverified', 'pending'];
+      allow update: if isSchoolAdmin(schoolId) &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.verificationStatus == resource.data.verificationStatus;
+      allow delete: if isSchoolAdmin(schoolId);
 
-      // Anyone can log an incident during an emergency
-      allow create: if isValidIncident(request.resource.data) &&
-        (
-          !('userId' in request.resource.data) ||
-          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
-        );
+      // Members subcollection: sole source of truth for school roles
+      match /members/{uid} {
+        allow get, list: if isSchoolMember(schoolId);
+        allow create, update, delete: if isSchoolAdmin(schoolId);
+      }
 
-      // Authenticated owners or admins can update incident records
-      allow update: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin()) &&
-        isValidIncident(request.resource.data) &&
-        areImmutableFieldsUnchanged(['id', 'createdAt', 'userId']);
+      // Single-use HMAC-SHA256 invites: NEVER readable/listable by non-admins
+      match /invites/{inviteId} {
+        allow get, list: if isSchoolAdmin(schoolId);
+        allow create: if isSchoolAdmin(schoolId) &&
+          request.resource.data.codeHash is string &&
+          request.resource.data.codeHash.size() >= 16 &&
+          request.resource.data.role in ['teacher', 'admin', 'student'] &&
+          request.resource.data.usedBy == null;
+        allow update, delete: if isSchoolAdmin(schoolId);
+      }
 
-      // Only incident owner or admin can delete incident history
-      allow delete: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+      // Nested Join Requests (/schools/{schoolId}/joinRequests/{uid})
+      // - Teacher join requests can be approved ONLY by a school `admin` (Principal).
+      // - Student join requests can be approved by the Teacher of that class or by a school `admin`.
+      match /joinRequests/{uid} {
+        allow get: if (isAuthenticated() && request.auth.uid == uid) || isSchoolTeacherOrAdmin(schoolId);
+        allow list: if isSchoolTeacherOrAdmin(schoolId);
+        allow create: if isEmailVerified() &&
+          request.auth.uid == uid &&
+          request.resource.data.uid == uid &&
+          request.resource.data.schoolId == schoolId &&
+          request.resource.data.requestedRole in ['teacher', 'student'] &&
+          request.resource.data.status == 'pending';
+        allow update: if
+          (resource.data.requestedRole == 'teacher' && isSchoolAdmin(schoolId)) ||
+          (resource.data.requestedRole == 'student' &&
+            (isSchoolAdmin(schoolId) || isTeacherOfClass(schoolId, resource.data.targetClassId)));
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      // Classes subcollection
+      match /classes/{classId} {
+        allow get, list: if isSchoolMember(schoolId);
+        allow create, update: if isSchoolTeacherOrAdmin(schoolId) &&
+          request.resource.data.name is string &&
+          request.resource.data.grade is string &&
+          request.resource.data.studentCount is int &&
+          request.resource.data.studentCount >= 1 &&
+          request.resource.data.studentCount <= 120;
+        allow delete: if isSchoolAdmin(schoolId);
+
+        // Pseudonymous Student Roster codes (S-01..S-40)
+        match /students/{studentId} {
+          allow get, list: if isSchoolMember(schoolId);
+          allow create, update: if isSchoolTeacherOrAdmin(schoolId) &&
+            request.resource.data.code is string &&
+            request.resource.data.code.size() <= 16 &&
+            (!('displayName' in request.resource.data) ||
+             get(/databases/$(database)/documents/schools/$(schoolId)).data.settings.showStudentNames == true);
+          allow delete: if isSchoolTeacherOrAdmin(schoolId);
+        }
+      }
+
+      // Drills subcollection
+      match /drills/{drillId} {
+        // Active drills can be read by authenticated users (including anonymous quick-join students) by ID
+        allow get: if isAuthenticated();
+        allow list: if isSchoolMember(schoolId);
+        allow create, update: if isSchoolTeacherOrAdmin(schoolId) &&
+          request.resource.data.mode == 'drill' &&
+          request.resource.data.scenarioId == 'cardiac-arrest-unresponsive' &&
+          request.resource.data.status in [
+            'draft', 'scheduled', 'ready', 'live', 'ended', 'completed', 'cancelled'
+          ];
+        allow delete: if isSchoolAdmin(schoolId);
+
+        // Per-team Runs inside a Drill
+        match /runs/{runId} {
+          allow get: if isAuthenticated();
+          allow list: if isSchoolMember(schoolId);
+          allow create, update: if isSchoolTeacherOrAdmin(schoolId) ||
+            (isAuthenticated() &&
+             resource.data.status in ['waiting', 'live'] &&
+             request.resource.data.teamMembers.size() <= 8);
+          allow delete: if isSchoolAdmin(schoolId);
+
+          // Drill-scoped Anonymous Participant Slot Binding (/participants/{anonUid})
+          // Students are anonymous and never get a members/{uid} doc; they can write ONLY their own participant doc while the drill is active.
+          match /participants/{anonUid} {
+            allow get, list: if isAuthenticated();
+            allow create, update: if isSchoolTeacherOrAdmin(schoolId) ||
+              (isAuthenticated() &&
+               request.auth.uid == anonUid &&
+               get(/databases/$(database)/documents/schools/$(schoolId)/drills/$(drillId)).data.status in ['ready', 'live'] &&
+               request.resource.data.studentCode is string &&
+               request.resource.data.studentCode.size() <= 16);
+            allow delete: if isSchoolTeacherOrAdmin(schoolId);
+          }
+
+          // Append-only, immutable Drill Events (/events/{eventId})
+          // Anonymous students can write ONLY their own events (`actorUid == request.auth.uid`) while the drill is active or within the sync grace window.
+          match /events/{eventId} {
+            allow get, list: if isAuthenticated();
+            allow create: if isAuthenticated() &&
+              isValidDrillEventType(request.resource.data.type) &&
+              request.resource.data.actorUid == request.auth.uid &&
+              request.resource.data.studentCode is string &&
+              request.resource.data.studentCode.size() <= 16 &&
+              request.resource.data.clientAt is number &&
+              (isSchoolTeacherOrAdmin(schoolId) ||
+               get(/databases/$(database)/documents/schools/$(schoolId)/drills/$(drillId)).data.status in ['ready', 'live']);
+            // Events are strictly immutable once written
+            allow update, delete: if false;
+          }
+        }
+      }
+
+      // Aggregated Class Stats
+      match /classStats/{classId} {
+        allow get, list: if isSchoolMember(schoolId);
+        allow create, update: if isSchoolTeacherOrAdmin(schoolId);
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      // Aggregated School Stats
+      match /schoolStats/{docId} {
+        allow get, list: if isSchoolMember(schoolId);
+        allow create, update: if isSchoolTeacherOrAdmin(schoolId);
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      // Frozen Term Reports
+      match /termReports/{termId} {
+        allow get, list: if isSchoolMember(schoolId);
+        allow create: if isSchoolAdmin(schoolId);
+        allow update, delete: if false;
+      }
     }
 
-    match /incidents/{incidentId} {
-      allow read: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+    // ===============================================================
+    // 3. PUBLIC VERIFIABLE CERTIFICATES (/certificates/{certId})
+    // Public `get` by unguessable certId ONLY (`list: if false` prevents scraping).
+    // Never stores student names on public verification docs.
+    // ===============================================================
+    match /certificates/{certId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.schoolId is string &&
+        isSchoolTeacherOrAdmin(request.resource.data.schoolId) &&
+        !('studentName' in request.resource.data);
+      allow delete: if false;
+    }
 
-      allow create: if isValidIncident(request.resource.data) &&
-        (
-          !('userId' in request.resource.data) ||
-          (isAuthenticated() && request.resource.data.userId == request.auth.uid)
-        );
-
-      allow update: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin()) &&
-        isValidIncident(request.resource.data) &&
-        areImmutableFieldsUnchanged(['id', 'createdAt', 'userId']);
-
-      allow delete: if isAuthenticated() &&
-        (('userId' in resource.data && resource.data.userId == request.auth.uid) || isAdmin());
+    // ===============================================================
+    // 4. PLATFORM PILOT AGGREGATES (/platformStats/{docId})
+    // Restricted to Sanjeevani platform team (`request.auth.token.platform == true`)
+    // ===============================================================
+    match /platformStats/{docId} {
+      allow get, list: if isPlatformTeam();
+      allow write: if false;
     }
   }
 }
+

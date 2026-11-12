@@ -339,7 +339,7 @@ export const PracticeView: React.FC = () => {
           }`}
         >
           <HeartPulse className="h-4 w-4 shrink-0" />
-          <span className="truncate">110 BPM CPR</span>
+          <span className="truncate">CPR Rhythm</span>
         </button>
 
         <button
@@ -625,7 +625,7 @@ export const PracticeView: React.FC = () => {
                     <span>Real-Time Cadence Monitor</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-ink">
-                    Interactive 110 BPM CPR Rhythm Check
+                    Interactive CPR Rhythm Check
                   </h2>
                   <p className="text-xs sm:text-sm text-ink-muted">
                     Tap the pulse circle or hit the <kbd className="px-2 py-0.5 bg-base border border-border rounded text-[10px] font-mono">Spacebar</kbd> in rhythm with the beat of "Stayin' Alive" (100–120 BPM).
@@ -673,7 +673,7 @@ export const PracticeView: React.FC = () => {
                     {cprActive ? 'PUSH HARD' : 'TAP TO START'}
                   </span>
                   <span className="text-[11px] text-white/80 font-medium">
-                    {cprActive ? 'Keep 110 BPM' : 'or Press Spacebar'}
+                    {cprActive ? 'Keep Steady Rhythm' : 'or Press Spacebar'}
                   </span>
                 </button>
 

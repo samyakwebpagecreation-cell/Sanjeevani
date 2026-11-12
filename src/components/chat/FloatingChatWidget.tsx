@@ -120,21 +120,15 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   return (
     <>
       {/* Floating Trigger Button */}
-      <div data-html2canvas-ignore="true" className="fixed bottom-4 right-3.5 sm:bottom-6 sm:right-8 z-30 flex items-center screenshot-ignore">
+      <div data-html2canvas-ignore="true" className="fixed bottom-24 right-4 md:bottom-6 md:right-8 z-30 flex items-center screenshot-ignore">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="btn-fluid btn-fluid-accent elevation-3 h-11 w-11 sm:h-auto sm:w-auto sm:pl-4 sm:pr-5 sm:py-3 rounded-full text-ink text-xs font-extrabold shadow-xl hover:scale-105 flex items-center justify-center sm:space-x-2.5"
+            className="btn-fluid btn-fluid-primary elevation-3 h-11 w-11 sm:h-auto sm:w-auto sm:pl-4 sm:pr-5 sm:py-3 rounded-xl text-white text-xs font-bold shadow-md hover:bg-primary-dark flex items-center justify-center sm:space-x-2"
             title="Ask Sanjeevani AI Guardian"
             aria-label="Open AI Guardian Chat"
           >
-            <div className="relative">
-              <Bot className="h-5 w-5 text-ink" strokeWidth={2.2} />
-              <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-            </div>
+            <Bot className="h-5 w-5 text-white" strokeWidth={2.2} aria-hidden="true" />
             <span className="hidden sm:inline">AI Guardian</span>
           </button>
         )}

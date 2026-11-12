@@ -91,7 +91,7 @@ export const ParamedicHandoverModal: React.FC<ParamedicHandoverModalProps> = ({
     'Danger check and scene security verified',
     'Response & breathing checked (Agonal breathing screened)',
     '112 Emergency dispatched via Crowd Squad',
-    'High-efficiency chest compressions delivered at 110 BPM target'
+    'High-efficiency chest compressions delivered at steady cadence'
   ];
 
   // Default forensic timeline items if none provided
@@ -99,7 +99,7 @@ export const ParamedicHandoverModal: React.FC<ParamedicHandoverModalProps> = ({
     { time: '00:00', event: 'Emergency incident initiated', detail: protocolTitle, type: 'admin' },
     { time: '00:15', event: 'Bystander consciousness & breathing evaluated', detail: 'Patient unresponsive', type: 'vital' },
     { time: '00:25', event: '112 Emergency dispatched', detail: 'Ambulance requested to doorstep', type: 'sensor' },
-    { time: '00:30', event: 'CPR Chest Compressions started', detail: 'Target: 110 BPM rhythm', type: 'cpr' },
+    { time: '00:30', event: 'CPR Chest Compressions started', detail: 'Target: steady CPR rhythm', type: 'cpr' },
     { time: '01:45', event: 'CPR rhythm consistency confirmed', detail: `${cprAccuracy}% Cadence compliance`, type: 'cpr' },
     { time: '02:00', event: 'Rescuer fatigue interval reached', detail: 'Swap rescuer prompt issued', type: 'vital' }
   ];
@@ -127,7 +127,7 @@ export const ParamedicHandoverModal: React.FC<ParamedicHandoverModalProps> = ({
       cprActiveSeconds: cprSeconds,
       cprCycles,
       cprCompressionsCount: cprCompressions,
-      cprCadenceAccuracy: `${cprAccuracy}% (Target 110 BPM)`,
+      cprCadenceAccuracy: `${cprAccuracy}% (AHA Cadence Target)`,
       woundPressureMinutes: pressureMinutes,
       burnCoolingMinutes: coolingMinutes
     },
@@ -609,7 +609,7 @@ ${pressureMinutes > 0 ? `- **Direct Wound Pressure:** ${pressureMinutes} mins\n`
                 <div className="p-3 rounded-2xl bg-surface border border-border/80 space-y-1">
                   <span className="text-[10px] text-ink-muted uppercase font-bold">Cadence Consistency</span>
                   <p className="text-base sm:text-lg font-bold text-success">{cprAccuracy}%</p>
-                  <span className="text-[10px] text-ink-muted">Target 110 BPM</span>
+                  <span className="text-[10px] text-ink-muted">AHA CPR Cadence</span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-surface border border-border/80 space-y-1">

@@ -1,0 +1,12 @@
+{
+  "name": "Sanjeevani — First-Aid Decision Support",
+  "description": "Free, offline-capable first-aid decision support PWA for Indian schools and families with AI Guardian triage, guided CPR camera, Crowd Squad QR, Paramedic SBAR docket, and Jan Aushadhi generic medicine finder.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

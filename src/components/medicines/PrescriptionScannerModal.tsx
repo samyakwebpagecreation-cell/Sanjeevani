@@ -1,501 +1,433 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Camera, 
-  Upload, 
-  X, 
-  Sparkles, 
-  Check, 
-  Copy, 
-  CheckCircle2, 
-  TrendingDown, 
-  ShieldCheck, 
-  Pill, 
-  AlertTriangle, 
-  ExternalLink, 
-  ArrowRight,
-  RotateCcw,
+import {
+  AlertCircle,
+  Camera,
+  Check,
   FileText,
-  Building2,
-  Globe
+  Loader2,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  X
 } from 'lucide-react';
-import { 
-  scanPrescriptionImage, 
-  PrescriptionScanReport, 
-  SAMPLE_PRESCRIPTION_REPORT 
+import { Button } from '../common/DesignSystem';
+import {
+  ExtractedPrescriptionCandidate,
+  extractPrescriptionCandidatesFromImage,
+  SAMPLE_PRESCRIPTION_CANDIDATES
 } from '../../services/cheapMedicinesService';
-import { Tilt3D } from '../common/Tilt3D';
 
-interface PrescriptionScannerModalProps {
+export interface PrescriptionScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectMedicineForRadar: (medicineName: string) => void;
+  onSelectMedicineForDetail?: (medicineName: string) => void;
 }
 
 export const PrescriptionScannerModal: React.FC<PrescriptionScannerModalProps> = ({
   isOpen,
   onClose,
-  onSelectMedicineForRadar
+  onSelectMedicineForDetail
 }) => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [statusText, setStatusText] = useState<string>('');
-  const [report, setReport] = useState<PrescriptionScanReport | null>(null);
-  const [copiedScript, setCopiedScript] = useState<boolean>(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isReadingOcr, setIsReadingOcr] = useState(false);
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<ExtractedPrescriptionCandidate[]>([]);
+  const [hasExtracted, setHasExtracted] = useState(false);
 
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const downscaleImage = (rawBase64: string, maxDim = 1024): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } else {
-          resolve(rawBase64);
-        }
-      };
-      img.onerror = () => resolve(rawBase64);
-      img.src = rawBase64;
-    });
+  const resetScanner = () => {
+    setPreviewUrl(null);
+    setOcrError(null);
+    setCandidates([]);
+    setHasExtracted(false);
+    setIsReadingOcr(false);
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setOcrError(null);
+    setCandidates([]);
+    setHasExtracted(false);
+
     const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      const optimized = await downscaleImage(base64, 1024);
-      setSelectedImage(optimized);
-      processImage(optimized);
+    reader.onloadend = async () => {
+      const dataUrl = reader.result as string;
+      setPreviewUrl(dataUrl);
+
+      const base64Parts = dataUrl.split(',');
+      const base64Data = base64Parts[1];
+      const mimeType = file.type || 'image/jpeg';
+
+      if (!base64Data) {
+        setOcrError("We couldn't read this photo. Type the medicine name instead.");
+        return;
+      }
+
+      setIsReadingOcr(true);
+      try {
+        const res = await extractPrescriptionCandidatesFromImage(base64Data, mimeType);
+        if (!res.ok || res.candidates.length === 0) {
+          setOcrError(
+            res.error_message ||
+              "We couldn't read this photo. Type the medicine name instead."
+          );
+          setCandidates([]);
+        } else {
+          setCandidates(res.candidates);
+          setHasExtracted(true);
+        }
+      } catch {
+        setOcrError("We couldn't read this photo. Type the medicine name instead.");
+      } finally {
+        setIsReadingOcr(false);
+      }
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
-  const processImage = async (base64Image: string) => {
-    setIsScanning(true);
-    setStatusText('Reading doctor handwriting and printed medicines...');
-    setReport(null);
-
-    try {
-      const scanResult = await scanPrescriptionImage(base64Image, (status) => setStatusText(status));
-      setReport(scanResult);
-    } catch (err) {
-      console.error('Prescription scan failed:', err);
-      // Fallback to sample report on critical error
-      setReport(SAMPLE_PRESCRIPTION_REPORT);
-    } finally {
-      setIsScanning(false);
-    }
+  const handleLoadSampleCandidates = () => {
+    setOcrError(null);
+    setPreviewUrl(null);
+    setCandidates(SAMPLE_PRESCRIPTION_CANDIDATES.map((c) => ({ ...c })));
+    setHasExtracted(true);
   };
 
-  const handleLoadSample = () => {
-    setSelectedImage(null);
-    setIsScanning(true);
-    setStatusText('Loading demo prescription slip & auditing Jan Aushadhi prices...');
-    setTimeout(() => {
-      setReport(SAMPLE_PRESCRIPTION_REPORT);
-      setIsScanning(false);
-    }, 800);
+  const handleCandidateChange = (
+    id: string,
+    field: 'medicine_name' | 'strength' | 'dosage_form',
+    value: string
+  ) => {
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+    );
   };
 
-  const handleCopyScript = () => {
-    if (!report?.chemistHandoffScript) return;
-    navigator.clipboard.writeText(report.chemistHandoffScript);
-    setCopiedScript(true);
-    setTimeout(() => setCopiedScript(false), 2500);
+  const handleRemoveCandidate = (id: string) => {
+    setCandidates((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const handleReset = () => {
-    setSelectedImage(null);
-    setReport(null);
-    setIsScanning(false);
-    setStatusText('');
+  const handleAddEmptyCandidate = () => {
+    setCandidates((prev) => [
+      ...prev,
+      {
+        id: `manual-${Date.now()}`,
+        raw_line: 'Added manually',
+        medicine_name: '',
+        strength: '',
+        dosage_form: 'Tablet',
+        selected: true
+      }
+    ]);
+    setHasExtracted(true);
+  };
+
+  const handleConfirmMedicineSearch = (cand: ExtractedPrescriptionCandidate) => {
+    const combinedQuery = [cand.medicine_name.trim(), cand.strength.trim()]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (!combinedQuery) return;
+    onSelectMedicineForDetail?.(combinedQuery);
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      
-      {/* Hidden File Inputs */}
-      <input
-        type="file"
-        ref={cameraInputRef}
-        accept="image/*"
-        capture="environment"
-        onChange={handleImageFileChange}
-        className="hidden"
-      />
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        onChange={handleImageFileChange}
-        className="hidden"
-      />
-
-      <div className="relative w-full max-w-3xl rounded-3xl bg-surface border border-border shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
-        
-        {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between bg-base/50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-              <Camera className="w-5 h-5" />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="scan-rx-modal-title"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-navy/70 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto"
+    >
+      <div className="relative w-full max-w-2xl bg-surface rounded-[20px] border border-border shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="px-5 py-4 sm:px-6 border-b border-border flex items-center justify-between gap-3 bg-surface shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="text-base sm:text-lg font-bold text-ink">
-                  Prescription & Medicine Strip Scanner
-                </h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-accent/20 text-accent font-mono">
-                  Smart Document OCR
-                </span>
-              </div>
-              <p className="text-xs text-ink-muted leading-tight mt-0.5">
-                Snap a doctor's prescription or medicine strip to extract all drugs and compute total Jan Aushadhi savings.
+            <div className="min-w-0">
+              <h2
+                id="scan-rx-modal-title"
+                className="text-lg sm:text-xl font-bold text-ink leading-snug"
+              >
+                Scan prescription (with confirmation step)
+              </h2>
+              <p className="text-xs sm:text-sm text-ink-muted leading-snug">
+                Review and edit extracted medicine names before running a price check.
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-ink-muted hover:text-ink hover:bg-border/60 transition-colors cursor-pointer"
-            aria-label="Close modal"
+            aria-label="Close prescription scanner"
+            className="w-10 h-10 rounded-xl bg-base hover:bg-primary-soft/40 border border-border flex items-center justify-center text-ink-muted hover:text-ink transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 flex-1">
-          
-          {/* STATE 1: No Image / Initial Intake */}
-          {!report && !isScanning && (
-            <div className="space-y-6">
-              
-              <div className="p-8 sm:p-10 rounded-3xl border-2 border-dashed border-primary/30 bg-primary/5 text-center space-y-5">
-                <div className="mx-auto w-16 h-16 rounded-3xl bg-primary/15 text-primary flex items-center justify-center shadow-inner">
-                  <Camera className="w-8 h-8" />
-                </div>
+        {/* Body */}
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Privacy Notice */}
+          <div className="p-3.5 rounded-xl bg-base border border-border flex items-start gap-2.5 text-xs sm:text-sm text-ink-muted">
+            <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <span>
+              <strong className="font-semibold text-ink">Privacy notice:</strong> Your prescription photo is processed in memory to read medicine lines and is never stored or saved.
+            </span>
+          </div>
 
-                <div className="space-y-1.5 max-w-md mx-auto">
-                  <h4 className="text-base font-bold text-ink">
-                    Take a Photo of Your Prescription or Medicine Box
-                  </h4>
-                  <p className="text-xs text-ink-muted leading-relaxed">
-                    Works on doctor handwriting, clinic slips, hospital discharge summaries, or printed pharmacy bills.
+          {/* Step 1: Upload or Camera if not yet extracted */}
+          {!hasExtracted && !isReadingOcr && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="p-5 rounded-2xl bg-base hover:bg-primary-soft/30 border border-border hover:border-primary/40 flex flex-col items-center text-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div className="font-bold text-base text-ink">Take prescription photo</div>
+                  <p className="text-xs text-ink-muted">
+                    Use your camera in good lighting
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-5 rounded-2xl bg-base hover:bg-primary-soft/30 border border-border hover:border-primary/40 flex flex-col items-center text-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-primary-soft text-primary flex items-center justify-center">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div className="font-bold text-base text-ink">Upload prescription image</div>
+                  <p className="text-xs text-ink-muted">
+                    JPG, PNG, or WebP photo from your device
+                  </p>
+                </button>
+              </div>
+
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleCandidates}
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-base hover:bg-primary-soft/40 border border-border text-sm font-semibold text-primary cursor-pointer whitespace-nowrap"
+                >
+                  Try sample extracted prescription
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddEmptyCandidate}
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-surface hover:bg-base border border-border text-sm font-semibold text-ink cursor-pointer whitespace-nowrap"
+                >
+                  Type medicine manually instead
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading OCR state */}
+          {isReadingOcr && (
+            <div className="p-8 rounded-2xl bg-base border border-border flex flex-col items-center text-center gap-3">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <div className="font-bold text-base text-ink">
+                Reading medicine names from photo…
+              </div>
+              <p className="text-sm text-ink-muted max-w-md">
+                We will show you the extracted lines to confirm before searching any prices.
+              </p>
+            </div>
+          )}
+
+          {/* Blurry / Unreadable Photo Error State */}
+          {ocrError && (
+            <div
+              role="alert"
+              className="p-4 rounded-2xl bg-red-50 border border-red-200 text-[#7F1D1D] dark:bg-red-950/40 dark:border-red-800/50 dark:text-red-200 space-y-3"
+            >
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-base leading-snug">
+                    We couldn't read this photo. Type the medicine name instead.
+                  </p>
+                  <p className="text-sm opacity-90">{ocrError}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button size="sm" variant="secondary" onClick={handleAddEmptyCandidate}>
+                  Type medicine name manually
+                </Button>
+                <Button size="sm" variant="neutral" onClick={resetScanner}>
+                  Try another photo
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Editable Confirmation List ("Is this right?") BEFORE any search runs */}
+          {hasExtracted && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-ink leading-snug">
+                    Is this right? Confirm extracted medicine names
+                  </h3>
+                  <p className="text-xs sm:text-sm text-ink-muted">
+                    Fix any spelling or strength mistakes below, then click &ldquo;Check verified prices&rdquo; on the medicine you want to inspect.
                   </p>
                 </div>
-
-                {/* Main Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                {previewUrl && (
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3.5 rounded-2xl bg-primary text-white text-xs sm:text-sm font-bold shadow-md hover:bg-primary-dark btn-press cursor-pointer"
+                    onClick={resetScanner}
+                    className="text-xs font-semibold text-primary hover:underline cursor-pointer whitespace-nowrap"
                   >
-                    <Camera className="w-4 h-4" />
-                    <span>Snap with Camera</span>
+                    Scan different photo
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3.5 rounded-2xl border-2 border-border bg-surface text-ink text-xs sm:text-sm font-bold hover:bg-base hover:border-primary/40 btn-press cursor-pointer transition-colors"
-                  >
-                    <Upload className="w-4 h-4 text-primary" />
-                    <span>Upload Photo from Gallery</span>
-                  </button>
-                </div>
+                )}
               </div>
 
-              {/* Instant Demo Shortcut */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center space-x-3 text-left">
-                  <Sparkles className="w-5 h-5 text-amber-600 shrink-0" />
-                  <div>
-                    <span className="text-xs font-bold text-ink block">
-                      Don't have a prescription photo right now?
-                    </span>
-                    <span className="text-[11px] text-ink-muted block">
-                      Test the vision OCR & multi-drug savings audit instantly with realistic sample clinic data.
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  className="shrink-0 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Try Sample Prescription Demo
-                </button>
-              </div>
-
-              {/* Privacy & Compliance Assurance */}
-              <div className="flex items-center justify-center space-x-4 text-[11px] text-ink-muted">
-                <span className="flex items-center space-x-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>100% Client-Side Privacy (Zero Data Selling)</span>
-                </span>
-                <span>•</span>
-                <span>CDSCO & WHO Bioequivalence Compliant</span>
-              </div>
-
-            </div>
-          )}
-
-          {/* STATE 2: Scanning & Processing State */}
-          {isScanning && (
-            <div className="p-10 rounded-3xl bg-base border border-border text-center space-y-5">
-              <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
-                <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-
-              <div className="space-y-2 max-w-md mx-auto">
-                <h4 className="text-base font-bold text-ink">
-                  Prescription Vision OCR in Progress
-                </h4>
-                <p className="text-xs text-primary font-mono font-semibold animate-pulse">
-                  {statusText}
-                </p>
-                <p className="text-[11px] text-ink-muted leading-relaxed">
-                  Deciphering brand names, strengths, formulations, and running live Firecrawl web search across Indian Jan Aushadhi catalogs...
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* STATE 3: Prescription Savings Docket Results */}
-          {report && !isScanning && (
-            <div className="space-y-6">
-              
-              {/* A. Hero Prescription Savings Docket Card */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0c3830] via-[#0e4d43] to-[#12584d] p-6 sm:p-8 text-white shadow-xl space-y-4 border border-white/15">
-                
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/15 pb-3">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-accent block">
-                      Prescription Audit Docket
-                    </span>
-                    <h4 className="text-sm font-bold text-white">
-                      {report.doctorOrClinicName}
-                    </h4>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[10px] font-mono">
-                      {report.totalMedicinesCount} Drugs Detected
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-mono font-bold flex items-center space-x-1">
-                      <Globe className="w-3 h-3" />
-                      <span>Live Firecrawl & PMBJP</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Total Savings Computation Banner */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-                  <div className="md:col-span-7 space-y-1.5">
-                    <div className="flex items-center space-x-1.5 text-accent">
-                      <TrendingDown className="w-4 h-4" />
-                      <span className="text-xs font-bold uppercase tracking-wider">Total Prescription Savings</span>
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                      Save {report.totalSavingsPercentage} on this prescription
-                    </h3>
-                    <p className="text-xs text-white/80 leading-relaxed">
-                      {report.totalSavingsRupees}. Jan Aushadhi generic equivalents share the identical active chemical salts and strength.
-                    </p>
-                  </div>
-
-                  {/* Side-by-Side Total Price Box */}
-                  <div className="md:col-span-5 p-4 rounded-2xl bg-black/35 backdrop-blur-md border border-white/15 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/75">Branded Total:</span>
-                      <span className="font-bold line-through text-red-300 font-mono text-sm">
-                        {report.totalBrandedEstimate}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs pt-1.5 border-t border-white/10">
-                      <span className="text-white font-bold">Jan Aushadhi Generic:</span>
-                      <span className="font-extrabold text-accent font-mono text-xl">
-                        {report.totalJanAushadhiEstimate}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* B. Detected Medicines List */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Pill className="w-4 h-4 text-primary" />
-                    <h4 className="text-xs sm:text-sm font-bold text-ink uppercase tracking-wider">
-                      Detected Medications & Generic Equivalents ({report.detectedMedicines.length})
-                    </h4>
-                  </div>
-                  <span className="text-[11px] text-ink-muted">100% Bioequivalent</span>
-                </div>
-
-                <div className="space-y-3">
-                  {report.detectedMedicines.map((med, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-all shadow-2xs space-y-3"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-2">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs font-mono font-bold text-ink-muted">#{idx + 1}</span>
-                            <h5 className="text-sm font-bold text-ink">{med.brandName}</h5>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-base text-ink-muted border border-border">
-                              {med.dosageForm} • {med.strength}
-                            </span>
-                          </div>
-                          {med.instructions && (
-                            <p className="text-[11px] text-ink-muted mt-0.5">
-                              📋 <em>{med.instructions}</em>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Individual Drug Price Tag */}
-                        <div className="flex items-center space-x-2 shrink-0">
-                          <span className="text-xs line-through text-red-500 font-mono">
-                            {med.brandedMarketPrice}
-                          </span>
-                          <span className="text-xs font-mono font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                            {med.genericJanAushadhiPrice} ({med.savingsPercentage} off)
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Chemical Salt & Jan Aushadhi Generic Substitute */}
-                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center text-xs">
-                        <div className="sm:col-span-8 space-y-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
-                            Active Chemical Salt
-                          </span>
-                          <p className="text-xs font-medium text-ink">
-                            {med.genericSaltName}
-                          </p>
-                          <p className="text-[11px] text-ink-muted">
-                            Recommended Jan Aushadhi: <strong className="text-ink">{med.topGenericAlternative.name}</strong> ({med.topGenericAlternative.approxPrice})
-                          </p>
-                        </div>
-
-                        <div className="sm:col-span-4 flex justify-start sm:justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectMedicineForRadar(med.brandName);
-                              onClose();
-                            }}
-                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 text-xs font-bold transition-colors cursor-pointer"
-                            title="Inspect full price audit in main radar"
-                          >
-                            <span>Deep Dive Radar</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* C. Chemist Handoff Script */}
-              <div className="p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-200">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    <span className="text-xs font-bold uppercase tracking-wider">
-                      Show or Tell Your Local Chemist
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyScript}
-                    className="inline-flex items-center space-x-1 px-3 py-1 rounded-lg bg-surface border border-amber-500/40 text-xs font-semibold text-ink hover:bg-amber-500/20 cursor-pointer transition-colors"
+                {candidates.map((cand, index) => (
+                  <div
+                    key={cand.id}
+                    className="p-4 rounded-2xl bg-base border border-border space-y-3"
                   >
-                    {copiedScript ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Copy Script</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-ink-muted">
+                      <span>
+                        Line {index + 1}: <q className="text-ink font-medium">{cand.raw_line}</q>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCandidate(cand.id)}
+                        aria-label={`Remove medicine line ${index + 1}`}
+                        className="inline-flex items-center gap-1 text-alert hover:underline font-semibold cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remove</span>
+                      </button>
+                    </div>
 
-                <p className="text-xs sm:text-sm text-ink font-medium italic leading-relaxed bg-surface/80 p-3.5 rounded-xl border border-amber-500/20">
-                  "{report.chemistHandoffScript}"
-                </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div>
+                        <label
+                          htmlFor={`med-name-${cand.id}`}
+                          className="block text-xs font-semibold text-ink-muted mb-1"
+                        >
+                          Medicine / brand name
+                        </label>
+                        <input
+                          id={`med-name-${cand.id}`}
+                          type="text"
+                          value={cand.medicine_name}
+                          onChange={(e) =>
+                            handleCandidateChange(cand.id, 'medicine_name', e.target.value)
+                          }
+                          placeholder="e.g., Augmentin 625"
+                          className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-surface border border-border text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
 
-                <p className="text-[11px] text-ink-muted">
-                  💡 <em>Under CDSCO national guidelines, Indian retail chemists are legally permitted to dispense identical generic salt substitutes upon patient request.</em>
-                </p>
+                      <div>
+                        <label
+                          htmlFor={`med-str-${cand.id}`}
+                          className="block text-xs font-semibold text-ink-muted mb-1"
+                        >
+                          Strength (optional if in name)
+                        </label>
+                        <input
+                          id={`med-str-${cand.id}`}
+                          type="text"
+                          value={cand.strength}
+                          onChange={(e) =>
+                            handleCandidateChange(cand.id, 'strength', e.target.value)
+                          }
+                          placeholder="e.g., 650mg"
+                          className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-surface border border-border text-sm text-ink tabular-nums focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`med-form-${cand.id}`}
+                          className="block text-xs font-semibold text-ink-muted mb-1"
+                        >
+                          Dosage form
+                        </label>
+                        <input
+                          id={`med-form-${cand.id}`}
+                          type="text"
+                          value={cand.dosage_form}
+                          onChange={(e) =>
+                            handleCandidateChange(cand.id, 'dosage_form', e.target.value)
+                          }
+                          placeholder="Tablet / Capsule"
+                          className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-surface border border-border text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        disabled={!cand.medicine_name.trim()}
+                        onClick={() => handleConfirmMedicineSearch(cand)}
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Check verified prices for {cand.medicine_name || 'this item'}</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {/* D. Action Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={handleReset}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl border border-border text-ink-muted text-xs font-bold hover:bg-base hover:text-ink cursor-pointer transition-colors"
+                  onClick={handleAddEmptyCandidate}
+                  className="inline-flex min-h-[40px] items-center gap-1.5 px-3.5 py-2 rounded-xl bg-base hover:bg-primary-soft/30 border border-border text-sm font-semibold text-ink cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Scan Another Prescription</span>
+                  <Plus className="w-4 h-4 text-primary" />
+                  <span>Add another medicine</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-primary-dark btn-press cursor-pointer shadow-xs"
-                >
-                  Done & Back to Radar
-                </button>
+                <Button size="sm" variant="neutral" onClick={onClose}>
+                  Cancel
+                </Button>
               </div>
-
             </div>
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 };

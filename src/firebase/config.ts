@@ -25,13 +25,35 @@ export const firebaseConfig = {
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 
-import { getFirestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore
+} from 'firebase/firestore';
 
 // Initialize Firebase Auth
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Initialize Cloud Firestore Database
-export const db = getFirestore(app);
+function initFirestore(): Firestore {
+  try {
+    if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
+    }
+  } catch {
+    // Fallback if already initialized or running in node/test environment
+  }
+  return getFirestore(app);
+}
+
+// Initialize Cloud Firestore Database with offline persistence
+export const db = initFirestore();
 
 export type { User };
+

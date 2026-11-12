@@ -108,7 +108,7 @@ export const DocketMarkdownView: React.FC<DocketMarkdownViewProps> = ({
 ### 3. ASSESSMENT & ACTIVE INTERVENTIONS
 - **Active CPR Performed:** **${effectiveCprSecs} seconds**
 - **CPR Cycles Delivered:** **${effectiveCycles} cycles** (~${effectiveCycles * 55} chest compressions)
-- **Target Cadence Accuracy:** **${effectiveAccuracy}%** Compliance (110 BPM target cadence)
+- **Target Cadence Accuracy:** **${effectiveAccuracy}%** Compliance (AHA target cadence)
 - **Airway & Positioning:** Airway opened, patient placed in supine/recovery position with continuous monitoring
 
 ### 4. RECOMMENDATIONS FOR ARRIVING EMS
@@ -142,7 +142,7 @@ export const DocketMarkdownView: React.FC<DocketMarkdownViewProps> = ({
       setIsSpeaking(false);
     } else {
       setIsSpeaking(true);
-      const sbarSpoken = `Paramedic SBAR Handover for Incident ${docketId}. Priority 1 Critical. Situation: ${effectiveTitle}. Background: Down time estimated at 2 to 4 minutes. Head struck ground: ${headStrike === 'yes' ? 'Yes, C-spine precautions active' : 'No'}. Oral fluids given: Zero. Assessment: Bystander CPR performed for ${effectiveCprSecs} seconds across ${effectiveCycles} cycles at ${effectiveAccuracy} percent 110 BPM cadence compliance. Recommendation: Immediate Advanced Life Support takeover.`;
+      const sbarSpoken = `Paramedic SBAR Handover for Incident ${docketId}. Priority 1 Critical. Situation: ${effectiveTitle}. Background: Down time estimated at 2 to 4 minutes. Head struck ground: ${headStrike === 'yes' ? 'Yes, C-spine precautions active' : 'No'}. Oral fluids given: Zero. Assessment: Bystander CPR performed for ${effectiveCprSecs} seconds across ${effectiveCycles} cycles at ${effectiveAccuracy} percent CPR cadence compliance. Recommendation: Immediate Advanced Life Support takeover.`;
       audioEngine.speak(sbarSpoken);
       setTimeout(() => setIsSpeaking(false), 14000);
     }
@@ -294,7 +294,7 @@ export const DocketMarkdownView: React.FC<DocketMarkdownViewProps> = ({
 
           <div className="p-4 rounded-2xl bg-white border-2 border-slate-200/80 shadow-2xs space-y-1">
             <div className="flex items-center justify-between text-amber-700">
-              <span className="text-[10px] font-black uppercase tracking-wider">110 BPM Sync</span>
+              <span className="text-[10px] font-black uppercase tracking-wider">CPR Cadence Sync</span>
               <Activity className="w-4 h-4" />
             </div>
             <div className="text-2xl font-black font-mono text-slate-900">
@@ -433,7 +433,7 @@ export const DocketMarkdownView: React.FC<DocketMarkdownViewProps> = ({
                   </div>
                   <ul className="text-xs text-slate-700 font-semibold space-y-1.5 pl-1">
                     <li>• <strong>Resuscitation:</strong> {effectiveCprSecs}s guided CPR ({effectiveCycles} cycles)</li>
-                    <li>• <strong>Compression Rhythm:</strong> 110 BPM acoustic lock ({effectiveAccuracy}% accuracy)</li>
+                    <li>• <strong>Compression Rhythm:</strong> Acoustic cadence lock ({effectiveAccuracy}% accuracy)</li>
                     <li>• <strong>Airway Patency:</strong> Head-tilt/chin-lift or recovery posture active</li>
                   </ul>
                 </div>
@@ -572,10 +572,10 @@ export const DocketMarkdownView: React.FC<DocketMarkdownViewProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-[11px] font-bold text-slate-500 pt-2">
-          Sanjeevani v2.0 Pre-Hospital Trauma Intelligence • Zero-Install Offline QR Handover
-        </div>
+        {/* Footer (Section G) */}
+        <footer className="text-center text-xs font-semibold text-slate-600 pt-3 border-t border-slate-200">
+          Recorded by a bystander using Sanjeevani. Not a clinical assessment.
+        </footer>
 
       </main>
     </div>

@@ -466,10 +466,7 @@ export const ScreenshotFab: React.FC = () => {
             ) : (
               <div className="relative flex items-center justify-center">
                 <Camera className="h-4.5 w-4.5 sm:h-5 sm:w-5 transition-transform group-hover:scale-110" strokeWidth={1.75} />
-                <span className="absolute -top-1 -right-1 flex h-2 w-2 sm:h-2.5 sm:w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-accent"></span>
-                </span>
+                <span className="absolute -top-1 -right-1 inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-accent" />
               </div>
             )}
           </button>

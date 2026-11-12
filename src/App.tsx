@@ -18,7 +18,7 @@ import { AcousticGaspDetector } from './components/diagnostics/AcousticGaspDetec
 import { LandingPage } from './components/landing/LandingPage';
 import { ParamedicHandoffView } from './components/handoff/ParamedicHandoffView';
 import { LibraryView } from './components/library/LibraryView';
-import { PracticeView } from './components/practice/PracticeView';
+import { DrillModeRouter, isDrillModeUrlPath } from './components/drill/DrillModeRouter';
 import { ChatView } from './components/chat/ChatView';
 import { FloatingChatWidget } from './components/chat/FloatingChatWidget';
 import { SquadJoinView } from './components/crowd/SquadJoinView';
@@ -28,11 +28,65 @@ import { MythBusterView } from './components/mythbuster/MythBusterView';
 import { DocketMarkdownView } from './components/handoff/DocketMarkdownView';
 import { InAppQRScannerModal } from './components/camera/InAppQRScannerModal';
 
+function parseInitialProtocolSlug(): string | null {
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const protoParam = searchParams.get('protocol');
+    if (protoParam) return protoParam;
+
+    if (window.location.pathname.startsWith('/protocols/')) {
+      const parts = window.location.pathname.split('/protocols/');
+      if (parts[1]) return parts[1].replace(/\/$/, '');
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function parseInitialDrillPath(): string | null {
+  try {
+    if (typeof window !== 'undefined' && isDrillModeUrlPath(window.location.pathname)) {
+      return window.location.pathname;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function AppContent() {
   const { user } = useAuth();
-  const [currentDestination, setCurrentDestination] = useState<Destination>('home');
+  const [activeProtocolSlug, setActiveProtocolSlug] = useState<string | null>(() =>
+    parseInitialProtocolSlug()
+  );
+  const [activeDrillPath, setActiveDrillPath] = useState<string | null>(() =>
+    parseInitialDrillPath()
+  );
+  const [currentDestination, setCurrentDestination] = useState<Destination>(() => {
+    const initialSlug = parseInitialProtocolSlug();
+    if (initialSlug || (typeof window !== 'undefined' && window.location.pathname === '/protocols')) {
+      return 'library';
+    }
+    if (parseInitialDrillPath()) {
+      return 'practice';
+    }
+    return 'home';
+  });
   const [chatInitialQuery, setChatInitialQuery] = useState<string | undefined>(undefined);
-  const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [showSplash, setShowSplash] = useState<boolean>(() => {
+    // Skip splash screen on direct /protocols or Drill Mode deep links
+    if (
+      typeof window !== 'undefined' &&
+      (window.location.pathname.startsWith('/protocols') ||
+        isDrillModeUrlPath(window.location.pathname))
+    ) {
+      return false;
+    }
+    return !parseInitialProtocolSlug();
+  });
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState<boolean>(false);
+  const [waitingSw, setWaitingSw] = useState<ServiceWorker | null>(null);
 
   // Bystander Squad Join PWA Route Check (?squad=SQUAD-XXXX or /squad/SQUAD-XXXX)
   const [activeSquadJoinId, setActiveSquadJoinId] = useState<string | null>(() => {
@@ -124,6 +178,73 @@ function AppContent() {
 
   // Site-Wide Scroll Reveal Engine across LandingPage & all Website Views
   useEffect(() => {
+    import('./utils/clippingCheck').then(({ installClippingCheck }) => {
+      installClippingCheck();
+    });
+  }, []);
+
+  // Clear any legacy Service Worker caches that may have cached Vite /src/* modules
+  useEffect(() => {
+    if (!showSplash) return;
+    const timer = window.setTimeout(() => setShowSplash(false), 2400);
+    return () => window.clearTimeout(timer);
+  }, [showSplash]);
+
+  // Register Offline Service Worker in Production only & Browser History Popstate Listener
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (import.meta.env.PROD) {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .then((reg) => {
+            if (reg.waiting) {
+              setWaitingSw(reg.waiting);
+              setSwUpdateAvailable(true);
+            }
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  setWaitingSw(newWorker);
+                  setSwUpdateAvailable(true);
+                }
+              });
+            });
+          })
+          .catch(() => {});
+      } else {
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((regs) => {
+            regs.forEach((r) => r.unregister().catch(() => {}));
+          })
+          .catch(() => {});
+      }
+    }
+
+    const handlePopState = () => {
+      const slug = parseInitialProtocolSlug();
+      const drillPath = parseInitialDrillPath();
+      if (slug) {
+        setActiveProtocolSlug(slug);
+        setCurrentDestination('library');
+      } else if (window.location.pathname === '/protocols') {
+        setActiveProtocolSlug(null);
+        setCurrentDestination('library');
+      } else if (drillPath) {
+        setActiveDrillPath(drillPath);
+        setCurrentDestination('practice');
+      } else {
+        setActiveProtocolSlug(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
 
     const observer = new IntersectionObserver(
@@ -142,7 +263,6 @@ function AppContent() {
     );
 
     const scanAndObserve = () => {
-      // 1. Explicitly marked .scroll-reveal and .scroll-stagger elements
       const explicitTargets = document.querySelectorAll('.scroll-reveal, .scroll-stagger');
       explicitTargets.forEach((el) => {
         if (!el.classList.contains('is-visible')) {
@@ -150,24 +270,6 @@ function AppContent() {
           if (rect.top < window.innerHeight * 0.92) {
             el.classList.add('is-visible');
           } else {
-            observer.observe(el);
-          }
-        }
-      });
-
-      // 2. Automatically enhance sections and cards across other website views
-      const autoSections = document.querySelectorAll('main section, main .grid > div');
-      autoSections.forEach((el) => {
-        if (
-          !el.classList.contains('scroll-reveal') &&
-          !el.parentElement?.classList.contains('scroll-stagger') &&
-          !el.hasAttribute('data-scroll-bound')
-        ) {
-          el.setAttribute('data-scroll-bound', 'true');
-          const rect = el.getBoundingClientRect();
-          // Only animate elements that start below the initial viewport fold
-          if (rect.top > window.innerHeight * 0.92) {
-            el.classList.add('scroll-reveal');
             observer.observe(el);
           }
         }
@@ -279,20 +381,22 @@ function AppContent() {
         />
       )}
 
-      {/* Streamlined Emergency Status Header (Hidden in full-screen Chat & Camera) */}
+      {/* Streamlined Emergency Status Header (Hidden in full-screen Chat, Camera & Print) */}
       {currentDestination !== 'chat' && currentDestination !== 'camera' && (
-        <Header
-          currentDestination={currentDestination}
-          onOpenMenu={() => setIsMenuOpen(true)}
-          onSelectDestination={(dest) => {
-            setCurrentDestination(dest);
-            if (dest !== 'chat') setChatInitialQuery(undefined);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          onTriggerEscalation={handleTriggerEscalation}
-          onOpenAuth={handleOpenAuth}
-          onOpenQRScanner={() => setShowQRScannerModal(true)}
-        />
+        <div className="print:hidden">
+          <Header
+            currentDestination={currentDestination}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            onSelectDestination={(dest) => {
+              setCurrentDestination(dest);
+              if (dest !== 'chat') setChatInitialQuery(undefined);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onTriggerEscalation={handleTriggerEscalation}
+            onOpenAuth={handleOpenAuth}
+            onOpenQRScanner={() => setShowQRScannerModal(true)}
+          />
+        </div>
       )}
 
       {/* Unified Command Drawer (Hamburger Menu) */}
@@ -354,13 +458,67 @@ function AppContent() {
         )}
 
         {currentDestination === 'library' && (
-          <LibraryView 
-            onGuideLive={handleGuideLive} 
+          <LibraryView
+            onGuideLive={handleGuideLive}
             onOpenChat={handleOpenChat}
+            onTriggerEscalation={handleTriggerEscalation}
+            onOpenCrowd={() => setShowCrowdModal(true)}
+            onOpenRadar={() => setShowRadarModal(true)}
+            initialProtocolSlug={activeProtocolSlug}
+            onProtocolSlugChange={(slug) => {
+              setActiveProtocolSlug(slug);
+              try {
+                const targetPath = slug ? `/protocols/${slug}` : '/protocols';
+                if (window.location.pathname !== targetPath) {
+                  window.history.pushState({}, document.title, targetPath);
+                }
+              } catch {}
+            }}
           />
         )}
 
-        {currentDestination === 'practice' && <PracticeView />}
+        {/* Non-Intrusive Offline Update Banner (Never interrupts an open protocol) */}
+        {swUpdateAvailable && !activeProtocolSlug && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-4 left-4 z-50 max-w-sm rounded-xl border border-border bg-surface p-3.5 shadow-lg flex items-center justify-between gap-3 print:hidden"
+          >
+            <span className="text-xs font-semibold text-ink">
+              Protocol update available for offline cache.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (waitingSw) {
+                  waitingSw.postMessage({ type: 'SKIP_WAITING' });
+                }
+                setSwUpdateAvailable(false);
+                window.location.reload();
+              }}
+              className="min-h-[32px] px-3 py-1 rounded-lg bg-primary text-white text-xs font-bold cursor-pointer whitespace-nowrap"
+            >
+              Update now
+            </button>
+          </div>
+        )}
+
+        {currentDestination === 'practice' && (
+          <DrillModeRouter
+            initialPath={activeDrillPath || '/teach'}
+            onPathChange={(nextPath) => setActiveDrillPath(nextPath)}
+            onOpenProtocol={(slug) => {
+              setActiveProtocolSlug(slug);
+              setCurrentDestination('library');
+              try {
+                window.history.pushState({}, document.title, `/protocols/${slug}`);
+              } catch {}
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onTriggerRealEmergency={handleTriggerEscalation}
+            onOpenAuth={handleOpenAuth}
+          />
+        )}
 
         {currentDestination === 'medicines' && (
           <CheapMedicinesView
@@ -395,17 +553,21 @@ function AppContent() {
         )}
       </main>
 
-      {/* Floating Action Button: Screen Capture (hidden in chat & camera) */}
+      {/* Floating Action Button: Screen Capture (hidden in chat, camera & print) */}
       {currentDestination !== 'chat' && currentDestination !== 'camera' && (
-        <ScreenshotFab />
+        <div className="print:hidden">
+          <ScreenshotFab />
+        </div>
       )}
 
-      {/* Persistent Floating AI Guardian Widget (Hidden in Chat & Camera) */}
-      {currentDestination !== 'chat' && currentDestination !== 'camera' && (
-        <FloatingChatWidget
-          onOpenFullChat={() => handleOpenChat()}
-          onTriggerEscalation={handleTriggerEscalation}
-        />
+      {/* Persistent Floating AI Guardian Widget (Hidden in Chat, Camera & Library which has dedicated Ask AI Guardian controls) */}
+      {currentDestination !== 'chat' && currentDestination !== 'camera' && currentDestination !== 'library' && (
+        <div className="print:hidden">
+          <FloatingChatWidget
+            onOpenFullChat={() => handleOpenChat()}
+            onTriggerEscalation={handleTriggerEscalation}
+          />
+        </div>
       )}
 
       {/* Deterministic Hard-Stop Escalation Modal */}
@@ -415,12 +577,22 @@ function AppContent() {
         onDismiss={handleDismissEscalation}
       />
 
-      {/* Firebase Auth Modal */}
+      {/* Firebase Auth & Role Dashboard Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         initialMode={authMode}
         onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => setIsAuthOpen(false)}
+        onSuccess={(targetDashboardPath) => {
+          setIsAuthOpen(false);
+          if (targetDashboardPath) {
+            setActiveDrillPath(targetDashboardPath);
+            setCurrentDestination('practice');
+            try {
+              window.history.pushState({}, document.title, targetDashboardPath);
+            } catch {}
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
       />
 
       {/* Breakthrough Field Tool Modals */}

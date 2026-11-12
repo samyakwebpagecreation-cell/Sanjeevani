@@ -988,7 +988,7 @@ export const LIBRARY_ENTRIES: LibraryEntry[] = [
       {
         "icon": "Check",
         "action": "Start continuous CPR",
-        "detail": "Push hard and fast in center of chest at 110 BPM (2 inches deep)."
+        "detail": "Push hard and fast in the center of the chest (5–6 cm / 2 inches deep)."
       },
       {
         "icon": "Check",
@@ -1002,7 +1002,7 @@ export const LIBRARY_ENTRIES: LibraryEntry[] = [
     "whenToGetHelp": [
       "Unresponsive, no breathing or only gasping sounds. Continuous CPR required."
     ],
-    "quickReminder": "Call 112, push hard & fast at 110 BPM, attach AED and follow voice instructions.",
+    "quickReminder": "Call 112, push hard & fast in center of chest, attach AED and follow voice instructions.",
     "offlineReady": true
   },
   {
@@ -2082,7 +2082,7 @@ export const LIBRARY_ENTRIES: LibraryEntry[] = [
       {
         "icon": "Check",
         "action": "Start CPR immediately",
-        "detail": "If unresponsive and not breathing, begin continuous chest compressions at 110 BPM."
+        "detail": "If unresponsive and not breathing, begin continuous chest compressions immediately."
       },
       {
         "icon": "Check",
@@ -2388,7 +2388,7 @@ export const LIBRARY_ENTRIES: LibraryEntry[] = [
       {
         "icon": "Check",
         "action": "CPR if not breathing",
-        "detail": "If unresponsive and not breathing normally, begin chest compressions at 110 BPM."
+        "detail": "If unresponsive and not breathing normally, begin continuous chest compressions immediately."
       }
     ],
     "whatNotToDo": [

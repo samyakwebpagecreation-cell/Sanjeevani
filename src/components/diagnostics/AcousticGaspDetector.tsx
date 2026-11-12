@@ -261,7 +261,7 @@ export const AcousticGaspDetector: React.FC<AcousticGaspDetectorProps> = ({
               className="w-full py-3 px-4 rounded-xl bg-alert text-white font-bold text-xs shadow-md hover:bg-alert/90 flex items-center justify-center space-x-2 btn-press"
             >
               <HeartPulse className="w-4 h-4 animate-bounce" />
-              <span>START CHEST COMPRESSIONS NOW (110 BPM)</span>
+              <span>START CHEST COMPRESSIONS NOW</span>
             </button>
           </div>
         )}

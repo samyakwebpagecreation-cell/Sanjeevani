@@ -131,7 +131,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Skill Practice & Quizzes
             </h2>
             <p className="text-sm text-ink-muted leading-relaxed">
-              Test your instincts with interactive "What would you do?" classroom scenarios and drill 110 BPM rhythmic CPR pacing.
+              Test your instincts with interactive "What would you do?" classroom scenarios and drill rhythmic CPR compression pacing.
             </p>
           </div>
 

@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
-import { 
-  X, 
-  Home, 
-  LayoutDashboard, 
-  BookOpen, 
-  GraduationCap, 
-  Sun, 
-  Moon, 
-  Phone, 
-  ShieldCheck, 
+import {
+  X,
+  Home,
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
+  Sun,
+  Moon,
+  Phone,
+  ShieldCheck,
   ExternalLink,
   Bot,
   FileText,
@@ -17,10 +17,12 @@ import {
   Pill,
   Camera,
   Sparkles,
-  QrCode
+  QrCode,
+  User as UserIcon
 } from 'lucide-react';
 import { Destination } from '../../types';
 import { useAuth } from '../../firebase/authContext';
+import { drillService } from '../../services/drillService';
 
 interface HamburgerMenuProps {
   isOpen: boolean;
@@ -47,7 +49,12 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   onOpenRadar,
   onOpenQRScanner
 }) => {
-  // Close on Escape key press
+  const [, setDrillTick] = React.useState(0);
+
+  useEffect(() => {
+    return drillService.subscribe(() => setDrillTick((t) => t + 1));
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -58,7 +65,6 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when drawer is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -70,64 +76,74 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     };
   }, [isOpen]);
 
-  const { user } = useAuth();
+  const { user, emailVerified } = useAuth();
+  const hasRegisteredSchool = Boolean(
+    user &&
+      !user.isAnonymous &&
+      emailVerified &&
+      drillService.getUserMemberships(user.uid).length > 0
+  );
 
   if (!isOpen) return null;
 
-  const destinations: { id: Destination; label: string; desc: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }>; badge?: string }[] = [
+  const destinations: {
+    id: Destination;
+    label: string;
+    desc: string;
+    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  }[] = [
     {
       id: 'home',
       label: user ? 'Dashboard' : 'Home',
-      desc: user ? 'Your progress, daily quests & guardian profile' : 'Overview & story of Sanjeevani',
+      desc: 'Overview and Sanjeevani tools',
       icon: user ? LayoutDashboard : Home
     },
     {
       id: 'chat',
-      label: 'AI First-Aid Helper',
-      desc: 'Instant step-by-step guidance & voice triage',
-      icon: Bot,
-      badge: 'AI Guardian'
+      label: 'AI Guardian',
+      desc: 'Step-by-step emergency triage and voice guide',
+      icon: Bot
     },
     {
       id: 'camera',
-      label: 'AI Medical Camera',
-      desc: 'Wound scan, CPR chest guide & pill scanner',
-      icon: Camera,
-      badge: '3 Roles'
+      label: 'AI Camera',
+      desc: 'Wound scan, CPR chest guide, and pill scanner',
+      icon: Camera
+    },
+    {
+      id: 'mythbuster',
+      label: 'MythBuster',
+      desc: 'Verify first-aid beliefs and medication rules',
+      icon: Sparkles
+    },
+    {
+      id: 'medicines',
+      label: 'Medicines',
+      desc: 'Find Jan Aushadhi generic equivalents',
+      icon: Pill
+    },
+    {
+      id: 'library',
+      label: 'Protocols',
+      desc: 'Offline first-aid protocols for common injuries',
+      icon: BookOpen
     },
     {
       id: 'handoff',
       label: 'Ambulance Report',
-      desc: 'Emergency vitals, notes & audio report for paramedics',
-      icon: FileText,
-      badge: 'QR Handoff'
+      desc: 'SBAR handover docket and QR for paramedics',
+      icon: FileText
     },
-    {
-      id: 'medicines',
-      label: 'Cheap Medicines',
-      desc: 'Save 50%-90% on generic & Jan Aushadhi medicines',
-      icon: Pill,
-      badge: 'Save 90%'
-    },
-    {
-      id: 'mythbuster',
-      label: 'Reality Check Engine',
-      desc: 'First-aid mythbuster, when to give meds & cheap generic finder',
-      icon: Sparkles,
-      badge: 'New'
-    },
-    {
-      id: 'practice',
-      label: 'Practice & Quizzes',
-      desc: 'Emergency practice & CPR rhythm drills',
-      icon: GraduationCap
-    },
-    {
-      id: 'library',
-      label: 'Offline First-Aid Guide',
-      desc: 'Emergency steps for all injuries without internet',
-      icon: BookOpen
-    }
+    ...(hasRegisteredSchool
+      ? [
+          {
+            id: 'practice' as Destination,
+            label: 'School Drills',
+            desc: 'Classroom CPR rhythm and school readiness drills',
+            icon: GraduationCap
+          }
+        ]
+      : [])
   ];
 
   const handleNavigate = (dest: Destination) => {
@@ -136,45 +152,46 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden transition-opacity">
+    <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
       {/* Backdrop */}
-      <div 
+      <div
         onClick={onClose}
-        className="fixed inset-0 bg-ink/30 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-ink/35 backdrop-blur-xs transition-opacity"
         aria-hidden="true"
       />
 
       {/* Slide-over Drawer (Right Side) */}
       <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
-        <div className="w-screen max-w-sm border-l border-border bg-surface/95 backdrop-blur-xl p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
-          {/* Top: Header & Close */}
+        <div className="w-screen max-w-sm border-l border-border bg-surface p-5 sm:p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
           <div>
-            <div className="flex items-center justify-between pb-5 border-b border-border">
-              <div className="flex items-center space-x-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <ShieldCheck className="h-5 w-5" strokeWidth={1.75} />
+            {/* Top Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-xl bg-primary-soft text-primary shrink-0">
+                  <ShieldCheck className="h-5 w-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                 </div>
-                <div>
-                  <span className="font-display-italic text-lg font-bold text-ink">
+                <div className="min-w-0">
+                  <span className="text-[18px] font-bold text-ink leading-snug block truncate">
                     Sanjeevani
                   </span>
-                  <p className="text-[11px] text-ink-muted leading-tight">Navigation & Controls</p>
+                  <p className="text-[14px] text-ink-muted leading-snug">Menu & tools</p>
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-ink-muted hover:text-ink hover:bg-base btn-press focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-border bg-surface text-ink-muted hover:text-ink hover:bg-base cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Close menu"
               >
-                <X className="h-4 w-4" strokeWidth={1.75} />
+                <X className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
               </button>
             </div>
 
-            {/* Main Navigation Links */}
-            <div className="mt-6 space-y-1.5">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted/80">
-                Destinations
+            {/* Primary Navigation Links */}
+            <div className="mt-5 space-y-1.5">
+              <p className="px-2 text-[14px] font-semibold text-ink-muted leading-snug">
+                Navigation
               </p>
               {destinations.map((item) => {
                 const Icon = item.icon;
@@ -182,31 +199,27 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left transition-all btn-press ${
-                      isActive 
-                        ? 'bg-primary text-white shadow-sm' 
+                    className={`w-full min-h-[52px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-primary-soft text-primary font-bold'
                         : 'text-ink hover:bg-base'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-1.5 rounded-lg ${isActive ? 'bg-white/15 text-white' : 'bg-primary/10 text-primary'}`}>
-                        <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg shrink-0 ${
+                          isActive ? 'bg-primary text-white' : 'bg-base text-primary border border-border'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                       </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-ink'}`}>
-                            {item.label}
-                          </span>
-                          {item.badge && (
-                            <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md ${
-                              isActive ? 'bg-white/20 text-white' : 'bg-accent/20 text-ink'
-                            }`}>
-                              {item.badge}
-                            </span>
-                          )}
+                      <div className="min-w-0">
+                        <div className="text-[15px] font-semibold leading-snug text-ink">
+                          {item.label}
                         </div>
-                        <p className={`text-xs ${isActive ? 'text-white/80' : 'text-ink-muted'}`}>
+                        <p className="text-[14px] text-ink-muted leading-snug">
                           {item.desc}
                         </p>
                       </div>
@@ -216,172 +229,120 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
               })}
             </div>
 
-            {/* Field Incident Breakthrough Tools */}
-            <div className="mt-6 px-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2 px-1">
-                Emergency Incident Tools
-              </div>
-              <div className="space-y-2">
-                {onOpenQRScanner && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenQRScanner();
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-ink transition-colors btn-press text-xs font-semibold group"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                        <QrCode className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-xs font-bold text-ink group-hover:text-emerald-600 transition-colors">
-                          Scan QR Docket / Squad
-                        </div>
-                        <div className="text-[10px] text-ink-muted">
-                          Optical camera scanner & calling data
-                        </div>
-                      </div>
-                    </div>
-                    <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                      Scan
-                    </span>
-                  </button>
-                )}
+            {/* Quick Actions (Scan QR, Crowd Squad, Nearby ER, Sign In) */}
+            <div className="mt-6 pt-5 border-t border-border space-y-2">
+              <p className="px-2 text-[14px] font-semibold text-ink-muted leading-snug">
+                Quick actions
+              </p>
 
-                {onOpenCrowd && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenCrowd();
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 text-ink transition-colors btn-press text-xs font-semibold group"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                        <Users className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-xs font-bold text-ink group-hover:text-primary transition-colors">
-                          Crowd Help QR
-                        </div>
-                        <div className="text-[10px] text-ink-muted">
-                          Organize bystanders with instant task QR
-                        </div>
-                      </div>
-                    </div>
-                    <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-primary/20 text-primary">
-                      QR Tasks
-                    </span>
-                  </button>
-                )}
+              {onOpenQRScanner && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenQRScanner();
+                  }}
+                  className="w-full min-h-[48px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-border bg-base hover:bg-primary-soft/50 text-ink transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <QrCode className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    <span className="text-[15px] font-semibold leading-snug">Scan QR code</span>
+                  </div>
+                </button>
+              )}
 
-                {onOpenRadar && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenRadar();
-                    }}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-accent/20 bg-accent/5 hover:bg-accent/10 text-ink transition-colors btn-press text-xs font-semibold group"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                        <MapPin className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-xs font-bold text-ink group-hover:text-accent transition-colors">
-                          Nearby Hospitals & AEDs
-                        </div>
-                        <div className="text-[10px] text-ink-muted">
-                          Find closest ER & defibrillator with ETA
-                        </div>
-                      </div>
-                    </div>
-                    <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider rounded bg-accent/20 text-accent">
-                      Hospital ER
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
+              {onOpenCrowd && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenCrowd();
+                  }}
+                  className="w-full min-h-[48px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-border bg-base hover:bg-primary-soft/50 text-ink transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Users className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    <span className="text-[15px] font-semibold leading-snug">Bystander squad QR</span>
+                  </div>
+                </button>
+              )}
 
-            {/* Account / Sign In Button */}
-            <div className="mt-4 px-1">
+              {onOpenRadar && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenRadar();
+                  }}
+                  className="w-full min-h-[48px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-border bg-base hover:bg-primary-soft/50 text-ink transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <MapPin className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    <span className="text-[15px] font-semibold leading-snug">Nearby hospitals & AEDs</span>
+                  </div>
+                </button>
+              )}
+
               <button
+                type="button"
                 onClick={() => {
                   onClose();
                   onOpenAuth('signin');
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-border bg-base text-ink hover:border-primary/40 btn-press text-xs font-semibold"
+                className="w-full min-h-[48px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-border bg-surface hover:bg-base text-ink transition-colors cursor-pointer text-left"
               >
-                <div className="flex items-center space-x-2.5">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/20 text-ink">
-                    <ShieldCheck className="w-4 h-4 text-accent" />
-                  </div>
-                  <span>Account & Cloud Sync</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <UserIcon className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                  <span className="text-[15px] font-semibold leading-snug">
+                    {user ? user.displayName || 'Signed in' : 'Sign in'}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold text-primary">Sign In / Join</span>
               </button>
             </div>
 
-            {/* Quick Emergency Contacts */}
-            <div className="mt-8 rounded-2xl border border-alert/20 bg-alert/5 p-4">
-              <div className="flex items-center space-x-2 text-alert">
-                <Phone className="h-4 w-4" strokeWidth={2} />
-                <span className="text-xs font-bold uppercase tracking-wider">Direct Emergency Line</span>
+            {/* Emergency Dispatch Line */}
+            <div className="mt-6 rounded-2xl border border-alert/30 bg-red-50/70 dark:bg-red-950/30 p-4 space-y-2.5">
+              <div className="flex items-center gap-2 text-alert">
+                <Phone className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                <span className="text-[14px] font-bold leading-snug">Emergency dispatch</span>
               </div>
-              <p className="mt-1 text-xs text-ink-muted">
-                If someone is unconscious, bleeding profusely, or having trouble breathing:
+              <p className="text-[14px] text-ink-muted leading-snug">
+                If someone is unconscious, not breathing, or bleeding heavily:
               </p>
-              <div className="mt-3 flex gap-2">
+              <div className="pt-1 flex gap-2">
                 <a
                   href="tel:112"
-                  className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 rounded-lg bg-alert text-white text-xs font-bold btn-press shadow-xs hover:bg-alert/90"
+                  className="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-alert hover:bg-alert-dark text-white text-[14px] font-bold leading-snug whitespace-nowrap"
                 >
                   <span>Call 112</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-                <a
-                  href="tel:911"
-                  className="flex-1 flex items-center justify-center space-x-1.5 py-2 px-3 rounded-lg border border-alert text-alert text-xs font-bold btn-press hover:bg-alert/10"
-                >
-                  <span>Call 911</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 </a>
               </div>
             </div>
           </div>
 
-          {/* Bottom Controls: Theme Toggle & Version */}
-          <div className="pt-6 border-t border-border mt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-ink">Appearance</span>
-                <p className="text-[11px] text-ink-muted">Light Mode is Default</p>
-              </div>
-
+          {/* Bottom Controls: Theme Toggle */}
+          <div className="pt-5 border-t border-border mt-6">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[14px] font-semibold text-ink leading-snug">Appearance</span>
               <button
+                type="button"
                 onClick={onToggleTheme}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-xl border border-border bg-base text-ink text-xs font-medium btn-press hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary"
-                title="Toggle Theme"
+                className="min-h-[40px] inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-border bg-base text-ink text-[14px] font-semibold leading-snug hover:border-primary/40 cursor-pointer"
+                title="Toggle theme"
               >
                 {isDarkMode ? (
                   <>
-                    <Moon className="h-3.5 w-3.5 text-accent" strokeWidth={1.75} />
+                    <Moon className="h-4 w-4 text-primary shrink-0" strokeWidth={1.75} aria-hidden="true" />
                     <span>Dark</span>
                   </>
                 ) : (
                   <>
-                    <Sun className="h-3.5 w-3.5 text-accent" strokeWidth={1.75} />
-                    <span>Light (Default)</span>
+                    <Sun className="h-4 w-4 text-primary shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                    <span>Light</span>
                   </>
                 )}
               </button>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between text-[11px] text-ink-muted">
-              <span>Sanjeevani v2.0.0</span>
-              <span>Calm Authority</span>
             </div>
           </div>
         </div>

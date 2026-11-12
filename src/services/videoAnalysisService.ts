@@ -99,22 +99,23 @@ export async function extractFramesFromVideo(
           throw new Error('Canvas 2D context unavailable.');
         }
 
+        const safeFrameCount = Math.min(8, Math.max(1, numFrames));
         const frames: ExtractedFrame[] = [];
         // Calculate timestamp intervals (avoid 0.0s exact start to let codecs initialize)
         const timestamps: number[] = [];
-        for (let i = 0; i < numFrames; i++) {
-          const ratio = (i + 0.5) / numFrames;
+        for (let i = 0; i < safeFrameCount; i++) {
+          const ratio = (i + 0.5) / safeFrameCount;
           timestamps.push(Math.min(duration - 0.05, Math.max(0.1, ratio * duration)));
         }
 
         for (let i = 0; i < timestamps.length; i++) {
           const targetTime = timestamps[i];
           if (onProgress) {
-            const percent = Math.round(((i + 1) / numFrames) * 45); // 0-45% for extraction
-            onProgress(percent, `Extracting frame ${i + 1}/${numFrames} at ${formatVideoTime(targetTime)}...`);
+            const percent = Math.round(((i + 1) / safeFrameCount) * 45); // 0-45% for extraction
+            onProgress(percent, `Extracting frame ${i + 1}/${safeFrameCount} at ${formatVideoTime(targetTime)}...`);
           }
 
-          await new Promise<void>((resSeek, rejSeek) => {
+          await new Promise<void>((resSeek) => {
             const timeout = setTimeout(() => {
               // Graceful timeout fallback: capture whatever is in buffer
               resSeek();
@@ -132,7 +133,7 @@ export async function extractFramesFromVideo(
 
           // Draw current video frame to canvas
           ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
           const base64 = dataUrl.replace(/^data:image\/[a-z]+;base64,/, '');
 
           frames.push({
@@ -245,7 +246,7 @@ PROVIDE A STRICT JSON RESPONSE MATCHING THIS EXACT SCHEMA (no markdown fences, r
         onProgress(75, `Reasoning over video dynamics with ${model.displayName}...`);
       }
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${AI_CONFIG.apiKey}`;
+      const endpoint = '/api/gemini/generate';
 
       const controller = new AbortController();
       const timer = setTimeout(() => {
@@ -256,6 +257,7 @@ PROVIDE A STRICT JSON RESPONSE MATCHING THIS EXACT SCHEMA (no markdown fences, r
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model: model.id,
           contents: [{ parts }],
           generationConfig: {
             temperature: 0.2,

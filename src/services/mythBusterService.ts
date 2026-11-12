@@ -4,8 +4,6 @@
  * Biological Reality, and Accredited Protocols (AHA, AIIMS, WHO, ICMR).
  */
 
-import { AI_CONFIG } from './aiService';
-
 export type MythVerdict = 'BUSTED' | 'CONFIRMED' | 'CONDITIONAL' | 'PLAUSIBLE';
 export type HazardSeverity = 'DANGEROUS' | 'HARMFUL DELAY' | 'INEFFECTIVE' | 'BENEFICIAL' | 'CAUTION';
 
@@ -480,11 +478,12 @@ Return ONLY a JSON object matching this schema:
 `;
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${AI_CONFIG.apiKey}`,
+      '/api/gemini/generate',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model: 'gemini-3.8-flash',
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.1,
@@ -582,11 +581,12 @@ Return ONLY a JSON object:
 `;
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${AI_CONFIG.apiKey}`,
+      '/api/gemini/generate',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model: 'gemini-3.8-flash',
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.1, maxOutputTokens: 900 }
         })

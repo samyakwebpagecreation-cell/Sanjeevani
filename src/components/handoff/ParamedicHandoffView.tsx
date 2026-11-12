@@ -85,7 +85,7 @@ export const ParamedicHandoffView: React.FC<ParamedicHandoffViewProps> = ({
     { time: '00:00', event: 'Incident Occurred / First Responders Alerted', detail: 'Scene witnessed by bystander', type: 'admin' },
     { time: '00:45', event: 'Primary Assessment: Loss of consciousness', detail: 'Unresponsive to verbal and tactile stimuli', type: 'vital' },
     { time: '01:10', event: 'Direct wound pressure applied to left temporal laceration', detail: 'Clean dressing with sustained pressure', type: 'vital' },
-    { time: '02:00', event: 'Bystander CPR initiated', detail: 'Cadence locked at 110 BPM target', type: 'cpr' }
+    { time: '02:00', event: 'Bystander CPR initiated', detail: 'Cadence locked to audio metronome', type: 'cpr' }
   ]);
 
   // Voice Note State
@@ -142,7 +142,7 @@ export const ParamedicHandoffView: React.FC<ParamedicHandoffViewProps> = ({
   const generateSBARScript = () => {
     const s = `SITUATION: Paramedic Handover for Incident ${docketId}. Triage Priority is ${incidentSeverity === 'P1_CRITICAL' ? 'P1 Critical' : 'P2 Urgent'}. Trauma clock active for ${formatTime(elapsedSeconds)}.`;
     const b = `BACKGROUND: ${latestVideoAnalysis?.whatHappenedSummary || 'Patient witnessed in acute collapse with blunt head trauma'}. Down time / unresponsiveness estimated at ${Math.round(unresponsiveSecs / 60)} minutes. Head strike is ${headStrike === 'yes' ? 'CONFIRMED: ' + headStrikeDetails : 'not observed'}. Oral fluids: ${oralFluids === 'no' ? 'Strictly ZERO (aspiration risk avoided)' : 'Fluids attempted'}.`;
-    const a = `ASSESSMENT: Bystander CPR administered for ${cprMinutes} minutes at 110 BPM. Direct hemostatic pressure held for ${pressureMinutes} minutes. ${latestVideoAnalysis ? 'Video chronology verified ' + latestVideoAnalysis.chronology.length + ' keyframe trauma events.' : ''}`;
+    const a = `ASSESSMENT: Bystander CPR administered for ${cprMinutes} minutes at steady cadence. Direct hemostatic pressure held for ${pressureMinutes} minutes. ${latestVideoAnalysis ? 'Video chronology verified ' + latestVideoAnalysis.chronology.length + ' keyframe trauma events.' : ''}`;
     const r = `RECOMMENDATION: Immediate cervical spine immobilization, formal GCS score baseline, oxygenation support, and trauma CT scan transfer.`;
     return `${s}\n\n${b}\n\n${a}\n\n${r}`;
   };
@@ -292,7 +292,7 @@ ${generateSBARScript()}
 ---
 
 ## 🩺 Active Interventions & Timeline
-- **CPR Duration:** ${cprMinutes} minutes at 110 BPM target cadence
+- **CPR Duration:** ${cprMinutes} minutes at steady target cadence
 - **Direct Wound Pressure:** ${pressureMinutes} minutes
 - **Chronological Milestones:**
 ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')}
@@ -639,7 +639,7 @@ ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')
                     <HeartPulse className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex flex-wrap items-center gap-4 text-sm font-bold text-ink">
-                    <span>🫀 CPR Duration: {cprMinutes} Minutes (110 BPM)</span>
+                    <span>🫀 CPR Duration: {cprMinutes} Minutes (Guided CPR)</span>
                     <span>•</span>
                     <span>🩸 Wound Pressure: {pressureMinutes} Minutes</span>
                   </div>
@@ -668,30 +668,137 @@ ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')
             </div>
           </div>
 
-          {/* SBAR Full Text View Card */}
-          <div className="rounded-3xl bg-surface border border-border p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-border/80 pb-3">
-              <div className="space-y-0.5">
-                <h3 className="text-base sm:text-lg font-bold text-ink">
-                  Standardized Clinical SBAR Handover Document
+          {/* Unified SBAR Clinical Handover Document (Section G) */}
+          <article className="rounded-3xl bg-surface border border-border p-6 shadow-xs space-y-5 print:border-slate-300 print:rounded-none print:p-0">
+            {/* Document Header: Incident ID, Date/Time, Location, Recorded by: bystander */}
+            <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border/80 pb-4">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-mono text-ink-muted">
+                  <span className="px-2 py-0.5 rounded bg-base border border-border font-bold text-ink">
+                    Incident ID: {docketId}
+                  </span>
+                  <span>·</span>
+                  <span>Date/Time: {new Date().toLocaleDateString()} · Active {formatTime(elapsedSeconds)}</span>
+                  <span>·</span>
+                  <span>Location: Scene GPS / Witnessed Sector</span>
+                  <span>·</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 font-sans font-semibold">
+                    recorded by: &ldquo;bystander&rdquo;
+                  </span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-ink">
+                  Paramedic SBAR Handover Docket
                 </h3>
-                <p className="text-xs text-ink-muted">
-                  Conforms to WHO & AIIMS Department of Emergency Medicine Handover Guidelines
+                {/* One-line Reason for call */}
+                <p className="text-sm font-semibold text-ink">
+                  <span className="text-ink-muted font-normal">Reason for call: </span>
+                  {latestVideoAnalysis?.whatHappenedSummary || incidentTitle}
                 </p>
               </div>
-              <button
-                onClick={handleCopyScript}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-base hover:bg-border/60 text-xs font-semibold text-ink border border-border transition-colors btn-press cursor-pointer"
-              >
-                {copiedScript ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedScript ? 'Copied' : 'Copy Text'}</span>
-              </button>
+
+              <div className="flex items-center gap-2 shrink-0 print:hidden">
+                <button
+                  type="button"
+                  onClick={handleCopyScript}
+                  className="inline-flex items-center space-x-1.5 min-h-[38px] px-3.5 py-1.5 rounded-xl bg-base hover:bg-border/60 text-xs font-bold text-ink border border-border transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  {copiedScript ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedScript ? 'Copied' : 'Copy SBAR'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center space-x-1.5 min-h-[38px] px-3.5 py-1.5 rounded-xl bg-base hover:bg-border/60 text-xs font-bold text-ink border border-border transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print A4</span>
+                </button>
+              </div>
+            </header>
+
+            {/* Four Structured S / B / A / R Blocks */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="p-4 rounded-2xl bg-base border border-border space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-[#DC2626] text-white text-xs font-extrabold flex items-center justify-center">
+                    S
+                  </span>
+                  <h4 className="text-sm font-extrabold text-ink uppercase tracking-wider">
+                    Situation
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-ink leading-relaxed">
+                  Paramedic handover for Incident {docketId}. Priority: {incidentSeverity === 'P1_CRITICAL' ? 'P1 Critical' : 'P2 Urgent'}. Scene stopwatch active for {formatTime(elapsedSeconds)}.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-base border border-border space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-amber-500 text-slate-950 text-xs font-extrabold flex items-center justify-center">
+                    B
+                  </span>
+                  <h4 className="text-sm font-extrabold text-ink uppercase tracking-wider">
+                    Background
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-ink leading-relaxed">
+                  {latestVideoAnalysis?.whatHappenedSummary || 'Witnessed collapse with blunt head trauma.'} Unresponsive ~{Math.round(unresponsiveSecs / 60)} min ({unresponsiveSecs}s). Head strike: {headStrike === 'yes' ? `Confirmed (${headStrikeDetails})` : 'Not observed'}. Oral fluids: {oralFluids === 'no' ? 'Zero (NPO maintained)' : 'Attempted'}.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-base border border-border space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-primary text-white text-xs font-extrabold flex items-center justify-center">
+                    A
+                  </span>
+                  <h4 className="text-sm font-extrabold text-ink uppercase tracking-wider">
+                    Assessment (Observations Recorded)
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-ink leading-relaxed">
+                  Bystander CPR: {cprMinutes} min at steady CPR cadence. Direct hemostatic wound pressure: {pressureMinutes} min. Seizures observed: {seizureSecs > 0 ? `${seizureSecs}s` : 'None'}.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-base border border-border space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-md bg-slate-700 text-white text-xs font-extrabold flex items-center justify-center">
+                    R
+                  </span>
+                  <h4 className="text-sm font-extrabold text-ink uppercase tracking-wider">
+                    Recommendation
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-ink leading-relaxed">
+                  Immediate ALS primary survey, cervical spine immobilization, formal GCS baseline, and emergency trauma transfer.
+                </p>
+              </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-base/60 border border-border/60 font-mono text-xs sm:text-sm text-ink leading-relaxed whitespace-pre-wrap">
-              {generateSBARScript()}
+            {/* Chronological Timestamped Timeline */}
+            <div className="space-y-2 pt-2 border-t border-border/80">
+              <h4 className="text-xs font-extrabold uppercase tracking-wider text-ink-muted">
+                Chronological Timestamped Timeline
+              </h4>
+              <ol className="space-y-1.5">
+                {timeline.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-baseline gap-3 text-xs sm:text-sm py-1.5 px-3 rounded-lg bg-base/70 border border-border/60"
+                  >
+                    <span className="font-mono font-bold text-primary shrink-0">[{item.time}]</span>
+                    <span className="font-semibold text-ink">{item.event}</span>
+                    {item.detail && <span className="text-xs text-ink-muted">· {item.detail}</span>}
+                  </li>
+                ))}
+              </ol>
             </div>
-          </div>
+
+            {/* Required Bystander Footer (Section G) */}
+            <footer className="pt-3 border-t border-border/80 text-xs font-semibold text-ink-muted text-center sm:text-left">
+              Recorded by a bystander using Sanjeevani. Not a clinical assessment.
+            </footer>
+          </article>
 
         </div>
       )}
@@ -717,7 +824,7 @@ ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')
           {/* Quick 1-Tap Milestone Buttons */}
           <div className="flex flex-wrap gap-2 pt-1">
             <button
-              onClick={() => handleAddMilestone('High-efficiency chest compressions started (110 BPM)', 'cpr')}
+              onClick={() => handleAddMilestone('High-efficiency chest compressions started', 'cpr')}
               className="px-3.5 py-2 rounded-xl bg-base hover:bg-primary/15 hover:text-primary text-xs font-bold text-ink border border-border transition-colors btn-press cursor-pointer"
             >
               + CPR Started

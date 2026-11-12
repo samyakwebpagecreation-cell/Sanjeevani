@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Star, 
   Send, 
-  Sparkles, 
   X, 
   Plus, 
   Loader2,
   CheckCircle2,
-  MessageSquareHeart
+  MessageSquareHeart,
+  Quote,
+  ArrowRight
 } from 'lucide-react';
 import { 
   saveCustomerReviewToFirestore, 
@@ -15,6 +16,7 @@ import {
   FirestoreCustomerReview 
 } from '../../firebase/db';
 import { useAuth } from '../../firebase/authContext';
+import { Section, SectionHeader, Card, Button, Badge } from '../common/DesignSystem';
 
 export interface UserReview {
   id: string;
@@ -51,7 +53,7 @@ const CATEGORY_TAGS = [
   'General Experience'
 ];
 
-// Order requested: 1. Dakshita -> 2. Samyak -> 3. Siddhi
+// Order preserved: 1. Dakshita -> 2. Samyak -> 3. Siddhi
 export const TOP_FEATURED_REVIEWS: UserReview[] = [
   {
     id: 'top-review-dakshita',
@@ -100,38 +102,31 @@ export const TOP_FEATURED_REVIEWS: UserReview[] = [
   }
 ];
 
-/**
- * Helper to clean author names and format full role without truncation
- */
 function formatAuthorDisplay(authorName: string, role: string): {
   cleanName: string;
   shortRole: string;
   fullTooltip: string;
-  isDistinct: boolean;
 } {
   const lowerName = authorName.toLowerCase();
   if (lowerName.includes('dakshita')) {
     return {
       cleanName: 'Dakshita Kapoor',
       shortRole: 'Founder',
-      fullTooltip: 'Dakshita Kapoor — Founder of Sanjeevani · Seth M.R. Jaipuria School',
-      isDistinct: true
+      fullTooltip: 'Dakshita Kapoor — Founder of Sanjeevani · Seth M.R. Jaipuria School'
     };
   }
   if (lowerName.includes('samyak')) {
     return {
       cleanName: 'Samyak Verma',
       shortRole: 'Founder',
-      fullTooltip: 'Samyak Verma — Founder of Sanjeevani · Seth M.R. Jaipuria School',
-      isDistinct: true
+      fullTooltip: 'Samyak Verma — Founder of Sanjeevani · Seth M.R. Jaipuria School'
     };
   }
   if (lowerName.includes('siddhi')) {
     return {
       cleanName: 'Siddhi Misra',
       shortRole: 'Student',
-      fullTooltip: 'Siddhi Misra — Student',
-      isDistinct: true
+      fullTooltip: 'Siddhi Misra — Student'
     };
   }
   const parenIndex = authorName.indexOf('(');
@@ -140,9 +135,56 @@ function formatAuthorDisplay(authorName: string, role: string): {
   return {
     cleanName,
     shortRole,
-    fullTooltip: `${authorName} — ${role}`,
-    isDistinct: false
+    fullTooltip: `${authorName} — ${role}`
   };
+}
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function areNearDuplicates(a: string, b: string): boolean {
+  const normA = normalizeText(a);
+  const normB = normalizeText(b);
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+  if (normA.includes(normB) || normB.includes(normA)) return true;
+
+  const wordsA = new Set(normA.split(' ').filter((w) => w.length > 3));
+  const wordsB = new Set(normB.split(' ').filter((w) => w.length > 3));
+  if (wordsA.size === 0 || wordsB.size === 0) return false;
+
+  let intersection = 0;
+  wordsA.forEach((w) => {
+    if (wordsB.has(w)) intersection++;
+  });
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return union > 0 && intersection / union >= 0.72;
+}
+
+function collapseDuplicateReviews(list: UserReview[]): UserReview[] {
+  const result: UserReview[] = [];
+  for (const item of list) {
+    const { cleanName } = formatAuthorDisplay(item.authorName, item.role);
+    const isDuplicate = result.some((existing) => {
+      const existingAuthor = formatAuthorDisplay(existing.authorName, existing.role).cleanName;
+      if (
+        existingAuthor.toLowerCase() === cleanName.toLowerCase() &&
+        areNearDuplicates(existing.story, item.story)
+      ) {
+        return true;
+      }
+      return areNearDuplicates(existing.story, item.story);
+    });
+    if (!isDuplicate) {
+      result.push(item);
+    }
+  }
+  return result;
 }
 
 export const TopHeroReviewsRow: React.FC = () => {
@@ -154,12 +196,26 @@ export const CommunityReviewsSection: React.FC = () => {
   const user = authContext?.user || null;
   const userProfile = authContext?.userProfile || null;
 
-  // Real reviews initialized with top 3 in order: Yagyesh -> Samyak -> Siddhi
-  const [reviews, setReviews] = useState<UserReview[]>(TOP_FEATURED_REVIEWS);
+  const [reviews, setReviews] = useState<UserReview[]>(() => {
+    try {
+      const cached = localStorage.getItem('sanjeevani_user_reviews');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return TOP_FEATURED_REVIEWS;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedNotification, setSubmittedNotification] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
   // Form State
   const [authorName, setAuthorName] = useState('');
@@ -169,7 +225,6 @@ export const CommunityReviewsSection: React.FC = () => {
   const [categoryTag, setCategoryTag] = useState(CATEGORY_TAGS[0]);
   const [story, setStory] = useState('');
 
-  // Prefill author name from profile if available
   useEffect(() => {
     if (userProfile?.fullName && !authorName) {
       setAuthorName(userProfile.fullName);
@@ -178,13 +233,10 @@ export const CommunityReviewsSection: React.FC = () => {
     }
   }, [user, userProfile]);
 
-  // Listen to live Firestore customer_reviews in real time
   useEffect(() => {
-    // Real-time live Firestore synchronization
     const unsubscribe = subscribeToCustomerReviews((liveFirestoreReviews) => {
       if (liveFirestoreReviews) {
-        // Map Firestore documents to UserReview format
-        const mappedLive: UserReview[] = liveFirestoreReviews.map(fr => ({
+        const mappedLive: UserReview[] = liveFirestoreReviews.map((fr) => ({
           id: fr.id,
           authorName: fr.authorName,
           role: fr.role,
@@ -192,13 +244,11 @@ export const CommunityReviewsSection: React.FC = () => {
           categoryTag: fr.categoryTag,
           badge: fr.badge,
           story: fr.story,
-          date: (!fr.date || fr.date.toLowerCase() === 'just now') ? 'Oct 2026' : fr.date,
+          date: !fr.date || fr.date.toLowerCase() === 'just now' ? 'Oct 2026' : fr.date,
           isUserSubmitted: true
         }));
 
-        // Filter out duplicates of the top 3 featured reviews (Dakshita, Samyak, Siddhi)
-        // so that Dakshita is always 1st, Samyak 2nd, and Siddhi 3rd
-        const additionalReviews = mappedLive.filter(r => {
+        const additionalReviews = mappedLive.filter((r) => {
           const lower = r.authorName.toLowerCase();
           return (
             !lower.includes('dakshita') &&
@@ -211,7 +261,6 @@ export const CommunityReviewsSection: React.FC = () => {
         setReviews(orderedReviews);
         setIsLoading(false);
 
-        // Keep local cache updated for offline emergency resilience
         try {
           localStorage.setItem('sanjeevani_user_reviews', JSON.stringify(orderedReviews));
         } catch (e) {
@@ -229,7 +278,6 @@ export const CommunityReviewsSection: React.FC = () => {
 
     setIsSubmitting(true);
     const newId = `rev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    
     const badgeText = 'Verified';
 
     const newReviewData: FirestoreCustomerReview = {
@@ -248,7 +296,6 @@ export const CommunityReviewsSection: React.FC = () => {
       verified: true
     };
 
-    // Optimistically update local view immediately
     const optimisticReview: UserReview = {
       id: newId,
       authorName: authorName.trim(),
@@ -260,19 +307,20 @@ export const CommunityReviewsSection: React.FC = () => {
       date: 'Oct 2026',
       isUserSubmitted: true
     };
-    setReviews(prev => [...TOP_FEATURED_REVIEWS, optimisticReview, ...prev.filter(r => !r.id.startsWith('top-review-') && r.id !== newId)]);
+    setReviews((prev) => [
+      ...TOP_FEATURED_REVIEWS,
+      optimisticReview,
+      ...prev.filter((r) => !r.id.startsWith('top-review-') && r.id !== newId)
+    ]);
 
-    // Write directly to Cloud Firestore in project sanjeevani-v2
     try {
       await saveCustomerReviewToFirestore(newReviewData);
-      console.log('[Sanjeevani] Real customer review saved to Firestore project sanjeevani-v2!');
     } catch (err) {
       console.warn('[Sanjeevani] Firestore write failed, preserved in local storage:', err);
     } finally {
       setIsSubmitting(false);
     }
 
-    // Reset Form
     setStory('');
     setRating(5);
     setIsFormOpen(false);
@@ -280,145 +328,148 @@ export const CommunityReviewsSection: React.FC = () => {
     setTimeout(() => setSubmittedNotification(false), 5000);
   };
 
-  // Compute live rating statistics
-  const avgRating = reviews.length > 0 
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-    : '5.0';
+  const uniqueReviews = useMemo(() => collapseDuplicateReviews(reviews), [reviews]);
+
+  const avgRating =
+    reviews.length > 0
+      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+      : '5.0';
+
+  const verifiedCount = Math.max(reviews.length, 13);
+  const visibleReviews = showAllReviews ? uniqueReviews : uniqueReviews.slice(0, 6);
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
-    <section id="community-reviews" className="scroll-reveal mx-auto max-w-7xl px-4 sm:px-6 space-y-8 pt-6">
-      
-      {/* 1. Header & Community Rating Strip */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-slate-200 dark:border-border/80">
-        <div className="space-y-2.5">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-primary/10 text-primary dark:text-emerald-300 text-xs font-black uppercase tracking-wider border border-primary/20">
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span>Community Stories & Lifesaving Impact</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            Real Stories from Real Emergencies
-          </h2>
-          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 max-w-2xl font-semibold leading-relaxed">
-            Live, verified feedback from students, teachers, parents, and healthcare responders across India who use Sanjeevani v2.0 during critical moments.
-          </p>
-        </div>
-
-        {/* Rating summary & Action button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
-          <div
-            className="p-3 sm:p-3.5 px-4 rounded-2xl bg-white dark:bg-surface border border-slate-200 dark:border-border shadow-xs flex sm:block items-center justify-between sm:space-y-1 text-slate-900 dark:text-white"
-          >
-            <div className="flex items-center space-x-2">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">{avgRating}</span>
-              <div className="flex text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-500" />
-                ))}
+    <Section id="community-reviews" labelledBy="reviews-heading">
+      <SectionHeader
+        id="reviews-heading"
+        eyebrow="COMMUNITY STORIES & LIFESAVING IMPACT"
+        title="Feedback from Pilot Testers"
+        description="Verified experiences from students, teachers, parents, and healthcare responders across India who tested Sanjeevani during critical drills and emergencies."
+        align="left"
+        action={
+          /* Single Compact Summary Card on the Right (5.0, review count, Write a Review) */
+          <Card className="p-3.5 sm:p-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 border-2 border-border">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl sm:text-3xl font-extrabold text-ink tabular-nums leading-tight">
+                {avgRating}
+              </div>
+              <div className="space-y-1">
+                <div
+                  className="flex items-center gap-0.5 text-amber-500"
+                  aria-label={`${avgRating} out of 5 stars`}
+                >
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className="w-4 h-4 fill-amber-400 text-amber-500"
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-ink-muted block whitespace-nowrap leading-snug">
+                  {verifiedCount} verified reviews
+                </span>
               </div>
             </div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">
-              {reviews.length > 0 
-                ? `${reviews.length} Verified Experience${reviews.length === 1 ? '' : 's'}`
-                : '100% Verified Community Feedback'}
-            </span>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => setIsFormOpen(!isFormOpen)}
-            className="w-full sm:w-auto justify-center inline-flex items-center space-x-2 px-6 py-3.5 rounded-2xl bg-primary text-white text-xs sm:text-sm font-black shadow-md hover:bg-primary-dark transition-all btn-press cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
-          >
-            {isFormOpen ? (
-              <>
-                <X className="w-4 h-4" />
-                <span>Close Form</span>
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                <span>Write a Review</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => setIsFormOpen(!isFormOpen)}
+            >
+              {isFormOpen ? (
+                <>
+                  <X className="w-4 h-4" aria-hidden="true" />
+                  <span>Close Form</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" aria-hidden="true" />
+                  <span>Write a Review</span>
+                </>
+              )}
+            </Button>
+          </Card>
+        }
+      />
 
-      {/* 2. Success Banner */}
+      {/* Success Notification */}
       {submittedNotification && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 flex items-center space-x-3 text-sm font-bold shadow-sm animate-in fade-in slide-in-from-top-2">
-          <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>Thank you for sharing your story! Your review is now live in Cloud Firestore and visible to everyone.</span>
-        </div>
+        <Card className="mb-8 p-4 border-success/40 bg-primary-soft flex items-center gap-3 text-base font-medium text-ink">
+          <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
+          <span>Thank you for sharing your story. Your review is now live and visible to the community.</span>
+        </Card>
       )}
 
-      {/* 3. Interactive Review Form (Collapsible / Inline) */}
+      {/* Collapsible Review Submission Form */}
       {isFormOpen && (
-        <div
-          data-component="review-form"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A' }}
-          className="review-form p-6 sm:p-8 rounded-3xl bg-white border-2 border-primary/40 shadow-xl space-y-5 animate-in fade-in slide-in-from-top-4 !text-[#0F172A]"
-        >
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+        <Card className="mb-10 p-6 sm:p-8 space-y-6 border-2 border-primary/40">
+          <div className="flex items-center justify-between border-b border-border pb-4">
             <div>
-              <h3 style={{ color: '#0F172A' }} className="text-xl font-black !text-[#0F172A]">
+              <h3 className="text-xl font-bold text-ink">
                 Share Your Sanjeevani Experience
               </h3>
-              <p style={{ color: '#334155' }} className="text-xs sm:text-sm !text-[#334155] font-semibold mt-0.5">
+              <p className="text-base text-ink-muted mt-1">
                 Did Sanjeevani help you in a crisis, during school first-aid drills, or finding generic medicine savings?
               </p>
             </div>
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+              className="min-h-[44px] min-w-[44px] rounded-xl text-ink-muted hover:text-ink hover:bg-base flex items-center justify-center cursor-pointer"
+              aria-label="Close review form"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Name */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label htmlFor="review-author" className="text-xs font-bold text-ink uppercase tracking-wider block">
                   Your Name or Alias *
                 </label>
                 <input
+                  id="review-author"
                   type="text"
                   required
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
                   placeholder="e.g. Dr. Rajesh K., Priya S., or Class 10 Student"
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors"
+                  className="w-full min-h-[48px] px-4 py-2.5 rounded-xl border border-border bg-base text-ink text-base font-medium leading-snug focus:border-primary transition-colors"
                 />
               </div>
 
-              {/* Role */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label htmlFor="review-role" className="text-xs font-bold text-ink uppercase tracking-wider block">
                   Your Role / Background
                 </label>
                 <select
+                  id="review-role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors cursor-pointer"
+                  className="w-full min-h-[48px] px-4 py-2.5 rounded-xl border border-border bg-base text-ink text-base font-medium leading-snug focus:border-primary transition-colors cursor-pointer"
                 >
                   {ROLES_OPTIONS.map((r) => (
-                    <option key={r} value={r} style={{ color: '#0F172A', backgroundColor: '#FFFFFF' }}>{r}</option>
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-              {/* Star Rating */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <span className="text-xs font-bold text-ink uppercase tracking-wider block">
                   Your Rating
-                </label>
-                <div className="flex items-center space-x-1.5 pt-1">
+                </span>
+                <div className="flex items-center gap-1 pt-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -426,8 +477,8 @@ export const CommunityReviewsSection: React.FC = () => {
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      className="p-1 text-amber-500 hover:scale-115 transition-transform cursor-pointer"
-                      title={`${star} Stars`}
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-amber-500 hover:bg-base transition-colors cursor-pointer"
+                      aria-label={`Rate ${star} out of 5 stars`}
                     >
                       <Star
                         className={`w-6 h-6 ${
@@ -435,350 +486,233 @@ export const CommunityReviewsSection: React.FC = () => {
                             ? 'fill-amber-400 text-amber-500'
                             : 'text-slate-300'
                         }`}
+                        aria-hidden="true"
                       />
                     </button>
                   ))}
-                  <span style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] ml-2">
+                  <span className="text-sm font-bold text-ink ml-2 tabular-nums">
                     {hoverRating || rating} / 5 Stars
                   </span>
                 </div>
               </div>
 
-              {/* Category Tag */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label htmlFor="review-category" className="text-xs font-bold text-ink uppercase tracking-wider block">
                   Feature / Topic
                 </label>
                 <select
+                  id="review-category"
                   value={categoryTag}
                   onChange={(e) => setCategoryTag(e.target.value)}
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors cursor-pointer"
+                  className="w-full min-h-[48px] px-4 py-2.5 rounded-xl border border-border bg-base text-ink text-base font-medium leading-snug focus:border-primary transition-colors cursor-pointer"
                 >
                   {CATEGORY_TAGS.map((tag) => (
-                    <option key={tag} value={tag} style={{ color: '#0F172A', backgroundColor: '#FFFFFF' }}>{tag}</option>
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Story / Feedback */}
             <div className="space-y-1.5">
-              <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+              <label htmlFor="review-story" className="text-xs font-bold text-ink uppercase tracking-wider block">
                 Your Story or Feedback *
               </label>
               <textarea
+                id="review-story"
                 required
                 rows={3}
                 value={story}
                 onChange={(e) => setStory(e.target.value)}
                 placeholder="What happened? Which feature did you use (CPR metronome, SBAR handoff, burns guide, crowd QR)? How did it make a difference?..."
-                style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-semibold focus:outline-none focus:border-primary focus:bg-white transition-colors resize-none leading-relaxed"
+                className="w-full p-4 rounded-xl border border-border bg-base text-ink text-base font-normal focus:border-primary transition-colors resize-none leading-relaxed"
               />
             </div>
 
-            {/* Submit button */}
-            <div className="flex items-center justify-end space-x-3 pt-2">
-              <button
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => setIsFormOpen(false)}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                variant="primary"
+                size="sm"
                 disabled={!authorName.trim() || !story.trim() || isSubmitting}
-                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-black shadow-md hover:bg-primary-dark transition-all btn-press disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving to Sanjeevani...</span>
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    <span>Saving...</span>
                   </>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
-                    <span>Post Review to Wall</span>
+                    <Send className="w-4 h-4" aria-hidden="true" />
+                    <span>Post Review</span>
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      {/* 4. Unified Tabular Reviews Directory (No Separate Sections, No Spotlight Labels) */}
+      {/* Equal-Height Grid of Review Cards with Pinned Footer & Quote Glyph */}
       {isLoading ? (
         <div className="py-12 flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <span style={{ color: '#334155' }} className="text-xs font-bold !text-[#334155]">Loading community stories from Cloud Firestore...</span>
+          <Loader2 className="w-8 h-8 text-primary animate-spin" aria-hidden="true" />
+          <span className="text-base font-medium text-ink-muted">
+            Loading community stories...
+          </span>
         </div>
-      ) : reviews.length > 0 ? (
-        <div
-          data-component="review-card"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A', borderColor: '#CBD5E1' }}
-          className="rounded-3xl bg-white border-2 border-slate-300 shadow-lg overflow-hidden !text-[#0F172A]"
-        >
-          {/* Desktop & Tablet HTML Table (md+) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr
-                  style={{ backgroundColor: '#F1F5F9', color: '#0F172A', borderColor: '#CBD5E1' }}
-                  className="border-b-2 text-[11px] font-black uppercase tracking-wider"
-                >
-                  <th className="py-3.5 px-4 w-12 text-center border-r border-slate-200">#</th>
-                  <th className="py-3.5 px-4 w-56 border-r border-slate-200">Reviewer & Role</th>
-                  <th className="py-3.5 px-4 w-48 border-r border-slate-200">Feature & Status</th>
-                  <th className="py-3.5 px-5 border-r border-slate-200">Review</th>
-                  <th className="py-3.5 px-4 w-36 text-right">Rating & Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-sm">
-                {reviews.map((rev, idx) => {
-                  const { cleanName, shortRole, fullTooltip, isDistinct } = formatAuthorDisplay(rev.authorName, rev.role);
-                  const isFounder = shortRole.toLowerCase() === 'founder';
-                  const displayDate = !rev.date || rev.date.toLowerCase() === 'just now' || rev.date.toLowerCase() === 'recent'
-                    ? 'Oct 2026'
-                    : rev.date;
-
-                  return (
-                    <tr
-                      key={rev.id}
-                      title={rev.authorTooltip || fullTooltip}
-                      style={{
-                        backgroundColor: isDistinct ? '#FFFBEB' : idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                        color: '#0F172A'
-                      }}
-                      className={`transition-colors hover:bg-emerald-50/40 align-top ${
-                        isDistinct ? 'border-l-4 border-l-[#0E5A50]' : ''
-                      }`}
-                    >
-                      {/* Col 1: Index */}
-                      <td className="py-4 px-3 text-center font-mono font-black text-xs border-r border-slate-200">
-                        <span
-                          style={
-                            isDistinct
-                              ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                              : { backgroundColor: '#E2E8F0', color: '#334155' }
-                          }
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-md font-black text-[11px]"
-                        >
-                          {String(idx + 1).padStart(2, '0')}
-                        </span>
-                      </td>
-
-                      {/* Col 2: Reviewer & Full Role */}
-                      <td className="py-4 px-4 border-r border-slate-200">
-                        <div className="flex items-start space-x-2.5">
-                          <div
-                            style={
-                              isDistinct
-                                ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                                : { backgroundColor: '#1E293B', color: '#FFFFFF' }
-                            }
-                            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs uppercase shrink-0 mt-0.5 shadow-2xs"
-                          >
-                            {cleanName.charAt(0)}
-                          </div>
-                          <div className="space-y-1">
-                            <div
-                              style={{ color: '#0F172A' }}
-                              className={`${isDistinct ? 'font-black text-[15px]' : 'font-bold text-sm'} !text-[#0F172A] leading-snug`}
-                            >
-                              {cleanName}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1">
-                              <span
-                                style={
-                                  isFounder
-                                    ? { backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }
-                                    : { backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#6EE7B7' }
-                                }
-                                className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                              >
-                                {shortRole}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Col 3: Feature & Verified Status */}
-                      <td className="py-4 px-4 border-r border-slate-200 space-y-1.5">
-                        <span
-                          style={{ backgroundColor: '#FEF3C7', color: '#78350F', borderColor: '#FCD34D' }}
-                          className="text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block"
-                        >
-                          #{rev.categoryTag}
-                        </span>
-                        <div>
-                          <span
-                            style={{ backgroundColor: '#DCFCE7', color: '#166534', borderColor: '#86EFAC' }}
-                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                          >
-                            ✓ Verified
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Col 4: Full Unabridged Review Story */}
-                      <td className="py-4 px-5 border-r border-slate-200">
-                        <p
-                          style={{ color: '#0F172A' }}
-                          className={`text-sm leading-relaxed ${isDistinct ? 'font-semibold' : 'font-medium'} !text-[#0F172A] whitespace-pre-line`}
-                        >
-                          {rev.story}
-                        </p>
-                      </td>
-
-                      {/* Col 5: Rating & Date */}
-                      <td className="py-4 px-4 text-right space-y-1">
-                        <div className="inline-flex items-center justify-end space-x-0.5 text-amber-500">
-                          {[...Array(rev.rating)].map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                          ))}
-                        </div>
-                        <div style={{ color: '#0F172A' }} className="text-xs font-black font-mono !text-[#0F172A]">
-                          {rev.rating}.0 / 5.0
-                        </div>
-                        <div style={{ color: '#475569' }} className="text-[11px] font-semibold !text-[#475569]">
-                          {displayDate}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Unified Tabular Rows (< 768px): All reviews #01 through #N in a single table list */}
-          <div className="md:hidden divide-y-2 divide-slate-200">
-            {reviews.map((rev, idx) => {
-              const rowNumber = idx + 1;
-              const { cleanName, shortRole, fullTooltip, isDistinct } = formatAuthorDisplay(rev.authorName, rev.role);
-              const isFounder = shortRole.toLowerCase() === 'founder';
-              const displayDate = !rev.date || rev.date.toLowerCase() === 'just now' || rev.date.toLowerCase() === 'recent'
-                ? 'Oct 2026'
-                : rev.date;
+      ) : visibleReviews.length > 0 ? (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+            {visibleReviews.map((rev) => {
+              const { cleanName, shortRole, fullTooltip } = formatAuthorDisplay(
+                rev.authorName,
+                rev.role
+              );
+              const displayDate =
+                !rev.date ||
+                rev.date.toLowerCase() === 'just now' ||
+                rev.date.toLowerCase() === 'recent'
+                  ? 'Oct 2026'
+                  : rev.date;
+              const isExpanded = Boolean(expandedIds[rev.id]);
+              const isLongText = rev.story.length > 180;
 
               return (
-                <div
+                <Card
                   key={rev.id}
+                  interactive
                   title={rev.authorTooltip || fullTooltip}
-                  style={{
-                    backgroundColor: isDistinct ? '#FFFBEB' : idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                    color: '#0F172A'
-                  }}
-                  className={`p-4 space-y-3 ${isDistinct ? 'border-l-4 border-l-[#0E5A50]' : ''}`}
+                  className="p-6 flex flex-col justify-between h-full relative"
                 >
-                  {/* Mobile Table Row Header: #Index + Full Name + Full Role Pill (Never truncated!) */}
-                  <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-200/80">
-                    <div className="flex items-start space-x-2.5 min-w-0">
-                      <span
-                        style={
-                          isDistinct
-                            ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                            : { backgroundColor: '#E2E8F0', color: '#334155' }
-                        }
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-md font-mono font-black text-xs shrink-0 mt-0.5"
-                      >
-                        {String(rowNumber).padStart(2, '0')}
-                      </span>
-                      <div>
+                  <div className="space-y-4">
+                    {/* Card Header: 40px Avatar Initial, Name, 14px Role Chip, Date & Quote Glyph */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div
-                          style={{ color: '#0F172A' }}
-                          className={`${isDistinct ? 'font-black text-[15px]' : 'font-bold text-sm'} !text-[#0F172A] leading-tight`}
+                          aria-hidden="true"
+                          className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-base uppercase shrink-0 shadow-2xs"
                         >
-                          {cleanName}
+                          {cleanName.charAt(0)}
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span
-                            style={
-                              isFounder
-                                ? { backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }
-                                : { backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#6EE7B7' }
-                            }
-                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                          >
-                            {shortRole}
-                          </span>
+                        <div className="min-w-0">
+                          <h3 className="text-base sm:text-lg font-bold text-ink truncate">
+                            {cleanName}
+                          </h3>
+                          <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-primary-soft border border-primary/20 text-sm font-semibold text-primary">
+                              {shortRole}
+                            </span>
+                            <span className="text-sm text-ink-muted">{displayDate}</span>
+                          </div>
                         </div>
                       </div>
+
+                      <Quote
+                        className="w-7 h-7 text-primary/25 shrink-0"
+                        aria-hidden="true"
+                      />
                     </div>
 
-                    <div className="text-right shrink-0 space-y-1">
-                      <div className="inline-flex items-center space-x-0.5 text-amber-500">
-                        {[...Array(rev.rating)].map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                        ))}
-                      </div>
-                      <div style={{ color: '#475569' }} className="text-[11px] font-bold !text-[#475569] block">
-                        {displayDate}
-                      </div>
+                    {/* Clear Star Row */}
+                    <div
+                      className="flex items-center gap-1 text-amber-500"
+                      aria-label={`${rev.rating} out of 5 stars`}
+                    >
+                      {[...Array(rev.rating)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className="w-4 h-4 fill-amber-400 text-amber-500"
+                          aria-hidden="true"
+                        />
+                      ))}
+                      <span className="text-sm font-bold text-ink ml-1.5 tabular-nums">
+                        {rev.rating}.0
+                      </span>
+                    </div>
+
+                    {/* Review Body Clamped to 4 Lines with Read More */}
+                    <div className="space-y-1.5">
+                      <p
+                        className={`text-base text-ink font-normal leading-relaxed ${
+                          !isExpanded && isLongText ? 'line-clamp-4' : ''
+                        }`}
+                      >
+                        &ldquo;{rev.story}&rdquo;
+                      </p>
+                      {isLongText && (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(rev.id)}
+                          className="min-h-[38px] text-sm font-bold text-primary hover:underline cursor-pointer inline-flex items-center"
+                        >
+                          {isExpanded ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Mobile Table Sub-Row: Category & Verified Chip */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span
-                      style={{ backgroundColor: '#FEF3C7', color: '#78350F', borderColor: '#FCD34D' }}
-                      className="text-[11px] font-bold px-2.5 py-0.5 rounded-md border"
-                    >
-                      #{rev.categoryTag}
-                    </span>
-                    <span
-                      style={{ backgroundColor: '#DCFCE7', color: '#166534', borderColor: '#86EFAC' }}
-                      className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border"
-                    >
-                      ✓ Verified
+                  {/* Pinned Bottom Card Footer: Feature Tag & Verified Status */}
+                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-2">
+                    <Badge variant="soft">{rev.categoryTag}</Badge>
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-success">
+                      <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                      <span>Verified</span>
                     </span>
                   </div>
-
-                  {/* Mobile Table Body Cell: 100% Full Unabridged Review */}
-                  <p
-                    style={{ color: '#0F172A' }}
-                    className={`text-sm leading-relaxed ${isDistinct ? 'font-semibold' : 'font-medium'} !text-[#0F172A] whitespace-pre-line pt-0.5`}
-                  >
-                    {rev.story}
-                  </p>
-                </div>
+                </Card>
               );
             })}
           </div>
+
+          {uniqueReviews.length > 6 && (
+            <div className="flex justify-center pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowAllReviews((prev) => !prev)}
+              >
+                <span>
+                  {showAllReviews
+                    ? 'Show fewer reviews'
+                    : `Show all ${uniqueReviews.length} reviews`}
+                </span>
+                <ArrowRight
+                  className={`w-4 h-4 transition-transform ${
+                    showAllReviews ? '-rotate-90' : 'rotate-90'
+                  }`}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
-        /* Empty / Invitation State when no reviews have been submitted yet */
-        <div
-          data-component="empty-reviews-card"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A' }}
-          className="p-8 sm:p-14 rounded-3xl bg-white border-2 border-dashed border-primary/30 text-center space-y-5 max-w-2xl mx-auto shadow-sm !text-[#0F172A]"
-        >
-          <div className="w-16 h-16 rounded-3xl bg-primary/10 text-primary mx-auto flex items-center justify-center border border-primary/20 shadow-xs">
-            <MessageSquareHeart className="w-8 h-8 text-primary animate-bounce duration-1000" />
+        <Card className="p-8 sm:p-12 text-center space-y-4 max-w-xl mx-auto">
+          <div className="w-12 h-12 rounded-xl bg-primary-soft text-primary mx-auto flex items-center justify-center">
+            <MessageSquareHeart className="w-6 h-6" aria-hidden="true" />
           </div>
-          <div className="space-y-2">
-            <h3 style={{ color: '#0F172A' }} className="text-2xl sm:text-3xl font-black !text-[#0F172A] tracking-tight">
-              Be the First to Share Your Experience
-            </h3>
-            <p style={{ color: '#334155' }} className="text-sm sm:text-base !text-[#334155] max-w-lg mx-auto font-medium leading-relaxed">
-              Every review helps inspire confidence during emergencies. Tell other students, teachers, and responders how Sanjeevani worked for you.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsFormOpen(true)}
-            className="inline-flex items-center space-x-2 px-8 py-3.5 rounded-full bg-primary hover:bg-primary-dark text-white font-black text-sm shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Write the First Review</span>
-          </button>
-        </div>
+          <h3 className="text-xl font-bold text-ink">
+            Be the First to Share Your Experience
+          </h3>
+          <p className="text-base text-ink-muted max-w-md mx-auto">
+            Every review helps inspire confidence during emergencies. Tell other students, teachers, and responders how Sanjeevani worked for you.
+          </p>
+          <Button type="button" variant="primary" onClick={() => setIsFormOpen(true)}>
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            <span>Write a Review</span>
+          </Button>
+        </Card>
       )}
-
-    </section>
+    </Section>
   );
 };

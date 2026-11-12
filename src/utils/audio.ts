@@ -1,4 +1,10 @@
 // Audio synthesis and Web Speech API utilities for hands-free guidance & CPR pacing
+import {
+  getAppLanguage,
+  getAppLanguageMeta,
+  selectBestVoiceForLanguage,
+  SupportedLanguageCode
+} from './languageStore';
 
 class AudioEngine {
   private ctx: AudioContext | null = null;
@@ -75,7 +81,11 @@ class AudioEngine {
     }
   }
 
-  public speak(text: string, onEnd?: () => void) {
+  public speak(
+    text: string,
+    onEnd?: () => void,
+    langOverride?: SupportedLanguageCode
+  ) {
     if (this.isMuted) {
       if (onEnd) onEnd();
       return;
@@ -90,13 +100,22 @@ class AudioEngine {
       // Duck metronome clicks to 20% while voice is speaking
       this.metronomeGainMultiplier = 0.2;
 
+      const activeLang = langOverride || getAppLanguage();
+      const langMeta = getAppLanguageMeta(activeLang);
+
       // Clean text of markdown asterisks for smoother TTS
       const cleanText = text.replace(/[*#_`]/g, '');
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.05;
-      utterance.volume = 0.95;
-      
+      utterance.lang = langMeta.bcp47;
+      utterance.rate = activeLang === 'en' ? 1.0 : 0.94;
+      utterance.pitch = 1.02;
+      utterance.volume = 0.98;
+
+      const bestVoice = selectBestVoiceForLanguage(activeLang);
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
+
       const restoreAndFinish = () => {
         this.metronomeGainMultiplier = 1.0;
         if (onEnd) onEnd();

@@ -164,9 +164,9 @@ export const MedicalTelemetryBar: React.FC<MedicalTelemetryBarProps> = ({
                 pulseBeat ? 'scale-125 text-accent' : 'text-emerald-400'
               }`} />
               <span className="text-sm font-bold font-mono text-white">
-                {isCPR ? bpm || 110 : 75}
+                {isCPR ? 'CPR' : 75}
               </span>
-              <span className="text-[10px] font-mono text-white/60">BPM</span>
+              <span className="text-[10px] font-mono text-white/60">{isCPR ? 'ACTIVE' : 'BPM'}</span>
             </div>
             <span className="text-[9px] font-mono text-accent">
               {isCPR ? 'METRONOME LOCK' : 'SINUS RHYTHM'}

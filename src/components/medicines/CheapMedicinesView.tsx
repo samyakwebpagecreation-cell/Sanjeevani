@@ -1,600 +1,819 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Pill, 
-  Sparkles, 
-  Zap, 
-  ExternalLink, 
-  Copy, 
-  Check, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShieldCheck, 
-  TrendingDown, 
-  MapPin, 
-  Building2, 
-  ArrowRight, 
-  RotateCcw,
-  Globe,
-  Info,
-  DollarSign,
-  HeartPulse,
-  Share2,
+import React, { useEffect, useState } from 'react';
+import {
+  AlertCircle,
+  AlertTriangle,
   Camera,
-  Upload
+  Check,
+  Copy,
+  Flag,
+  HelpCircle,
+  MessageSquare,
+  RefreshCw,
+  Search,
+  Send,
+  X
 } from 'lucide-react';
-import { searchCheapMedicine, MedicineSavingsReport, MedicineWebSource } from '../../services/cheapMedicinesService';
-import { CURATED_MEDICATIONS } from '../../services/mythBusterService';
-import { Tilt3D } from '../common/Tilt3D';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { Destination } from '../../types';
+import { Button, Card } from '../common/DesignSystem';
+import { runTransparentMedicineSearch } from '../../services/cheapMedicinesService';
+import { POPULAR_MEDICINE_CHIPS } from '../../services/medicines/referenceData';
+import { SimulatedFailureType } from '../../services/medicines/fetchSources';
+import {
+  SearchPipelineResult,
+  SearchProgressState
+} from '../../services/medicines/types';
+import { AlternativeRow } from './AlternativeRow';
+import { MatchTable } from './MatchTable';
+import { MedicineIdentityCard } from './MedicineIdentityCard';
+import { MethodPanel } from './MethodPanel';
 import { PrescriptionScannerModal } from './PrescriptionScannerModal';
+import { PriceCompareCard } from './PriceCompareCard';
+import { SearchProgress } from './SearchProgress';
+import { SourceLedger } from './SourceLedger';
+import { SourcesAndReviewFooter } from '../common/SourcesAndReviewFooter';
 
-interface CheapMedicinesViewProps {
+export interface CheapMedicinesViewProps {
+  onNavigate?: (destination: Destination) => void;
+  onLaunchGuardianWithQuery?: (query: string) => void;
   onBackToHome?: () => void;
   onOpenRadar?: () => void;
 }
 
-export const CheapMedicinesView: React.FC<CheapMedicinesViewProps> = ({
-  onBackToHome,
-  onOpenRadar
-}) => {
-  const [searchQuery, setSearchQuery] = useState<string>('Augmentin 625');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [statusText, setStatusText] = useState<string>('');
-  const [report, setReport] = useState<MedicineSavingsReport | null>(null);
-  const [copiedScript, setCopiedScript] = useState<boolean>(false);
-  const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
+export const CheapMedicinesView: React.FC<CheapMedicinesViewProps> = () => {
+  const [searchQuery, setSearchQuery] = useState('Augmentin 625');
+  const [activeChipQuery, setActiveChipQuery] = useState('Augmentin 625');
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState<SearchProgressState | null>(null);
+  const [result, setResult] = useState<SearchPipelineResult | null>(null);
+  const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  // Popular everyday medicines in India
-  const popularMedicines = [
-    { name: 'Augmentin 625', category: 'Antibiotic' },
-    { name: 'Dolo 650', category: 'Fever & Pain' },
-    { name: 'Pan-D', category: 'Acidity & Gas' },
-    { name: 'Telma 40', category: 'Blood Pressure' },
-    { name: 'Glycomet 500', category: 'Diabetes' },
-    { name: 'Montair-LC', category: 'Allergy & Cough' },
-    { name: 'Azithral 500', category: 'Throat & Infection' },
-    { name: 'Atorva 10', category: 'Cholesterol' }
-  ];
+  // "Report a wrong price or source" modal state
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportIssueType, setReportIssueType] = useState('Price differs at pharmacy');
+  const [reportNote, setReportNote] = useState('');
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
-  // Initial load
-  useEffect(() => {
-    executeSearch('Augmentin 625');
-  }, []);
+  const executeLookup = async (
+    queryToRun: string,
+    opts?: {
+      forceRefresh?: boolean;
+      simulate_failures?: Record<string, SimulatedFailureType>;
+    }
+  ) => {
+    const trimmed = queryToRun.trim();
+    if (!trimmed) return;
 
-  const executeSearch = async (queryToSearch: string) => {
-    const q = queryToSearch.trim();
-    if (!q) return;
-
+    setSearchQuery(trimmed);
+    setActiveChipQuery(trimmed);
     setIsLoading(true);
-    setStatusText(`Searching real web via Firecrawl for "${q}"...`);
-    setReport(null);
+    setCopiedScript(false);
+    setHighlightedSourceId(null);
 
     try {
-      const res = await searchCheapMedicine(q, (status) => setStatusText(status));
-      setReport(res);
-    } catch (err) {
-      console.error('Medicine search error:', err);
+      const pipelineRes = await runTransparentMedicineSearch(trimmed, {
+        forceRefresh: opts?.forceRefresh,
+        simulate_failures: opts?.simulate_failures,
+        onProgress: (pState) => {
+          setProgress({ ...pState });
+        }
+      });
+      setResult(pipelineRes);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    // Support optional URL query params for automated testing of states/failures (?med=Pan or ?med=Augmentin+625&sim=partial)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const medParam = params.get('med');
+      const simParam = params.get('sim');
+      let simMap: Record<string, SimulatedFailureType> | undefined;
+      if (simParam === 'all_fail') {
+        simMap = { '*': 'timeout' };
+      } else if (simParam === 'partial') {
+        simMap = { pmbjp: 'timeout', nppa: 'blocked', pharmeasy: 'timeout' };
+      } else if (simParam === 'outlier') {
+        simMap = { pharmeasy: 'outlier' };
+      }
+      if (medParam) {
+        executeLookup(medParam, { simulate_failures: simMap });
+        return;
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+    executeLookup('Augmentin 625');
+  }, []);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    executeSearch(searchQuery);
+    if (!searchQuery.trim()) return;
+    executeLookup(searchQuery.trim());
   };
 
-  const handleCopyScript = () => {
-    if (!report?.whatToTellChemist) return;
-    navigator.clipboard.writeText(report.whatToTellChemist);
+  const handleCopyCounterScript = () => {
+    if (!result?.counter_script) return;
+    navigator.clipboard?.writeText(result.counter_script);
     setCopiedScript(true);
     setTimeout(() => setCopiedScript(false), 2500);
   };
 
+  const handleInspectSource = (sourceId: string) => {
+    setHighlightedSourceId(sourceId);
+    const ledgerEl = document.getElementById('source-ledger-section');
+    if (ledgerEl) {
+      ledgerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleScrollToMethodology = () => {
+    const methodEl = document.getElementById('how-this-works-section');
+    if (methodEl) {
+      methodEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingReport(true);
+    const payload = {
+      medicine_query: result?.identity?.brand_name || searchQuery,
+      issue_type: reportIssueType,
+      note: reportNote.trim().slice(0, 500),
+      reported_at_iso: new Date().toISOString()
+    };
+
+    try {
+      // Save locally first so offline reports never get lost
+      const existingRaw = localStorage.getItem('sanjeevani_price_reports') || '[]';
+      const existing = JSON.parse(existingRaw);
+      existing.push(payload);
+      localStorage.setItem('sanjeevani_price_reports', JSON.stringify(existing.slice(-50)));
+
+      // Also persist to Firestore if online
+      if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+        await Promise.race([
+          addDoc(collection(db, 'price_reports'), {
+            ...payload,
+            createdAt: serverTimestamp()
+          }),
+          new Promise((resolve) => setTimeout(resolve, 1500))
+        ]);
+      }
+    } catch {
+      // Local storage copy already saved
+    } finally {
+      setIsSubmittingReport(false);
+      setReportSubmitted(true);
+    }
+  };
+
+  // Determine if partial source failures happened on a successful lookup
+  const failedSourcesCount = result
+    ? Math.max(0, result.sources_checked_count - result.sources_succeeded_count)
+    : 0;
+
+  const cheapestVerifiedGeneric =
+    result && result.verified_alternatives.length > 0
+      ? result.verified_alternatives.find(
+          (alt) =>
+            alt.product_name.toLowerCase() !==
+            (result.identity?.brand_name || '').toLowerCase()
+        ) || result.verified_alternatives[0]
+      : null;
+
   return (
-    <div className="min-h-screen pb-24 space-y-10 sm:space-y-14 animate-in fade-in duration-300">
-      
-      {/* 1. HERO HEADER (Calm, Airy, Uncluttered) */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
-        <div className="relative overflow-hidden rounded-3xl sm:rounded-[36px] bg-gradient-to-br from-[#0F3D36] via-[#0E5A50] to-[#176256] p-6 sm:p-10 lg:p-14 text-white shadow-xl border border-white/15">
-          
-          {/* Ambient Glows */}
-          <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-emerald-400/15 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-80 h-80 rounded-full bg-amber-400/15 blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-accent border border-white/15">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span>Live Web Search: Firecrawl Search API Active</span>
-            </div>
-
-            <h1 className="fluid-section-title font-bold tracking-tight text-white leading-tight font-display-italic">
-              Find Cheap Medicines & Generic Substitutes in India
-            </h1>
-
-            <p className="text-sm sm:text-base text-white/85 leading-relaxed font-normal">
-              Stop overpaying for brand marketing. Search any branded medicine to discover verified <strong>Jan Aushadhi (PMBJP)</strong> and generic chemical equivalents with real web pricing from 1mg, PharmEasy, and government generic drug lists.
-            </p>
-
-            {/* Streamlined Airy Telemetry Capsule */}
-            <div className="pt-2 flex flex-wrap items-center gap-2 text-xs text-white/80 font-medium">
-              <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                ⚡ 60% – 90% Savings
-              </span>
-              <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                🏛️ 10,000+ Jan Aushadhi Stores
-              </span>
-              <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                🧬 100% Same Active Salt
-              </span>
-              <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15">
-                🛡️ WHO-GMP Standards
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. UNIFIED SEARCH BAR WITH INTEGRATED CAMERA OCR */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-5">
-        
-        <form onSubmit={handleFormSubmit} className="relative flex items-center fluid-dock elevation-3 rounded-2xl border-2 border-border/80 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 transition-all p-1.5 gap-1.5 sm:gap-2">
-          <div className="pl-2.5 sm:pl-3 text-ink-muted pointer-events-none shrink-0">
-            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-          </div>
-
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Type any medicine (e.g. Augmentin 625, Dolo 650, Pan-D, Telma 40)..."
-            style={{ color: '#0F172A' }}
-            className="flex-1 min-w-0 bg-transparent text-[#0F172A] !text-[#0F172A] text-xs sm:text-base font-semibold focus:outline-none placeholder:text-[#64748B] !placeholder:text-[#64748B] border-none px-1.5 sm:px-2"
-          />
-
-          {/* Integrated Camera OCR Button - visible on mobile & desktop */}
-          <button
-            type="button"
-            onClick={() => setIsScannerOpen(true)}
-            className="inline-flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-2 sm:py-2.5 rounded-xl bg-base hover:bg-border/60 text-ink text-[11px] sm:text-xs font-bold border border-border transition-colors cursor-pointer shrink-0"
-            title="Scan paper prescription with camera OCR"
-          >
-            <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
-            <span>Scan Rx</span>
-          </button>
-
-          <button
-            type="submit"
-            disabled={isLoading || !searchQuery.trim()}
-            className="btn-fluid btn-fluid-primary px-3.5 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer shrink-0 flex items-center space-x-1 sm:space-x-1.5"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Searching...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-3.5 h-3.5 text-accent shrink-0" />
-                <span>Search</span>
-              </>
-            )}
-          </button>
-        </form>
-
-
-        {/* Quick Suggestion Chips */}
-        <div className="space-y-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted block">
-            Popular Essential Medicines in India:
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {popularMedicines.map((m) => (
-              <button
-                key={m.name}
-                type="button"
-                onClick={() => {
-                  setSearchQuery(m.name);
-                  executeSearch(m.name);
-                }}
-                className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer elevation-1 hover:elevation-2 btn-fluid-interactive ${
-                  searchQuery.toLowerCase().includes(m.name.toLowerCase())
-                    ? 'bg-primary text-white border-primary shadow-xs'
-                    : 'bg-surface border-border text-ink hover:border-primary/40 hover:bg-base'
-                }`}
+    <div className="min-h-screen bg-base text-ink pb-20">
+      {/* ====================================================================
+       * COMPACT HERO (<= 220px tall on desktop, neutral clinical surface)
+       * ==================================================================== */}
+      <section
+        aria-labelledby="cheap-medicines-heading"
+        className="bg-surface border-b border-border py-5 sm:py-6"
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-3.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="space-y-1">
+              <h1
+                id="cheap-medicines-heading"
+                className="text-xl sm:text-2xl font-extrabold text-ink tracking-tight leading-snug text-balance"
               >
-                <Pill className="w-3.5 h-3.5 opacity-70" />
-                <span>{m.name}</span>
-                <span className="text-[10px] opacity-75 font-normal">({m.category})</span>
-              </button>
-            ))}
+                Find cheaper generic medicines in India
+              </h1>
+              <p className="text-sm sm:text-base text-ink-muted leading-snug">
+                Compare branded strip prices with same-salt Jan Aushadhi and retail generics from verifiable public catalogues.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleScrollToMethodology}
+              className="inline-flex min-h-[34px] items-center gap-1 text-sm font-semibold text-primary hover:underline cursor-pointer whitespace-nowrap"
+            >
+              <HelpCircle className="w-4 h-4 shrink-0" />
+              <span>How this works</span>
+            </button>
           </div>
+
+          {/* Search Bar + Scan Rx Button */}
+          <form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1 min-w-0">
+              <Search
+                aria-hidden="true"
+                className="w-5 h-5 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                maxLength={100}
+                aria-label="Search medicine brand or salt name"
+                placeholder="Search brand or salt (e.g., Augmentin 625, Dolo 650, Pan-D, Telma 40)…"
+                className="w-full min-h-[46px] pl-11 pr-9 py-2 rounded-xl bg-base border border-border text-base font-medium text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search query"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-ink-muted hover:text-ink absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button type="submit" size="sm" variant="primary" className="min-h-[46px] px-5">
+                <Search className="w-4 h-4" />
+                <span>Check prices</span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setIsScannerOpen(true)}
+                className="min-h-[46px] px-4 whitespace-nowrap"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Scan Rx</span>
+              </Button>
+            </div>
+          </form>
         </div>
       </section>
 
-      {/* 3. LOADING STATE */}
-      {isLoading && (
-        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="p-10 rounded-3xl bg-surface border border-border text-center space-y-4 shadow-sm">
-            <div className="relative mx-auto w-14 h-14 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping" />
-              <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin flex items-center justify-center">
-                <Globe className="w-5 h-5 text-primary" />
-              </div>
-            </div>
+      {/* ====================================================================
+       * MAIN CONTENT CONTAINER (max-w-3xl, clean 2-level hierarchy)
+       * ==================================================================== */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-5 space-y-5">
+        {/* Popular Medicine Chips (Fixed selected state + single-line layout) */}
+        <section aria-label="Popular medicines">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+              Commonly checked medicines
+            </span>
+            <button
+              type="button"
+              onClick={() => executeLookup('Pan')}
+              className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+            >
+              Test ambiguous query (&ldquo;Pan&rdquo;)
+            </button>
+          </div>
 
-            <div className="space-y-1 max-w-md mx-auto">
-              <h3 className="text-base font-bold text-ink">Searching Real Web & Auditing Drug Prices</h3>
-              <p className="text-xs text-primary font-mono font-semibold animate-pulse">
-                {statusText}
-              </p>
-              <p className="text-[11px] text-ink-muted leading-relaxed pt-1">
-                Querying Firecrawl Search API across 1mg, PharmEasy, and PMBJP Jan Aushadhi catalogs...
-              </p>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {POPULAR_MEDICINE_CHIPS.map((chip) => {
+              const isSelected =
+                activeChipQuery.toLowerCase() === chip.query.toLowerCase();
+              return (
+                <button
+                  key={chip.query}
+                  type="button"
+                  onClick={() => executeLookup(chip.query)}
+                  aria-pressed={isSelected}
+                  className={`inline-flex min-h-[40px] items-center gap-2 px-3.5 py-1.5 rounded-xl border text-sm leading-snug transition-colors cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? 'bg-primary text-white border-primary shadow-2xs'
+                      : 'bg-surface hover:bg-primary-soft/40 text-ink border-border hover:border-primary/40'
+                  }`}
+                >
+                  <span className="font-bold">{chip.label}</span>
+                  <span
+                    className={`text-[14px] font-normal ${
+                      isSelected ? 'text-white/90' : 'text-ink-muted'
+                    }`}
+                  >
+                    · {chip.condition}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
-      )}
 
-      {/* 4. RESULTS DISPLAY */}
-      {report && !isLoading && (
-        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
-          
-          {/* A. Hero Savings Card */}
-          <Tilt3D maxTilt={4} scale={1.01}>
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 p-6 sm:p-8 text-white shadow-xl space-y-4 border border-emerald-400/20">
-              
-              <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/15 pb-3">
-                <div className="flex items-center space-x-2">
-                  <span className="px-2.5 py-1 rounded-full bg-white/20 text-white text-[11px] font-bold">
-                    Price Audit for: {report.searchedName}
-                  </span>
-                  {report.isLiveWebResult && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-mono font-bold flex items-center space-x-1">
-                      <Globe className="w-3 h-3" />
-                      <span>Live Firecrawl Web Result</span>
-                    </span>
-                  )}
-                </div>
+        {/* Live Search Progress Checklist */}
+        {isLoading && progress && <SearchProgress progress={progress} />}
 
-                {report.firecrawlSearchLatencyMs > 0 && (
-                  <span className="text-[10px] text-white/70 font-mono">
-                    ⚡ Web Search: {(report.firecrawlSearchLatencyMs / 1000).toFixed(1)}s
-                  </span>
-                )}
-              </div>
-
-              {/* Huge Savings Headline */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <div className="md:col-span-7 space-y-2">
-                  <div className="flex items-center space-x-2 text-accent">
-                    <TrendingDown className="w-5 h-5" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Massive Generic Savings</span>
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                    Save {report.savingsPercentage} on this medicine
-                  </h2>
-                  <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
-                    {report.savingsRupees}. Jan Aushadhi and generic equivalents contain the identical active chemical salt with matching therapeutic bioequivalence.
-                  </p>
-                </div>
-
-                {/* Side-by-Side Price Comparison Pill */}
-                <div className="md:col-span-5 p-4 rounded-2xl bg-black/30 backdrop-blur-md border border-white/15 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-white/75">Branded Market Price:</span>
-                    <span className="font-bold line-through text-red-300 font-mono text-sm">
-                      {report.brandedMarketPrice}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
-                    <span className="text-white font-bold">Jan Aushadhi / Generic:</span>
-                    <span className="font-extrabold text-accent font-mono text-lg sm:text-xl">
-                      {report.genericJanAushadhiPrice}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </Tilt3D>
-
-          {/* B. Chemical Salt & Therapeutic Indication */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-surface border border-border shadow-xs space-y-4">
-            <div className="flex items-start justify-between gap-3">
+        {/* ====================================================================
+         * EDGE STATE 1: AMBIGUOUS QUERY DISAMBIGUATION PICKER ("Pan", "Dolo")
+         * ==================================================================== */}
+        {!isLoading &&
+          result &&
+          result.outcome === 'disambiguation_needed' &&
+          result.disambiguation_options && (
+            <Card className="p-5 sm:p-6 space-y-4">
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-primary block">
-                  Active Pharmaceutical Ingredient (API)
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-ink">
-                  {report.genericSaltName}
-                </h3>
-                <p className="text-xs text-ink-muted leading-relaxed">
-                  {report.uses}
+                <h2 className="text-lg sm:text-xl font-bold text-ink leading-snug">
+                  Which &ldquo;{result.query}&rdquo; medicine do you mean?
+                </h2>
+                <p className="text-sm text-ink-muted">
+                  Several distinct strengths or salt combinations share this prefix. Pick the exact medicine on your strip or prescription before we compare prices:
                 </p>
-              </div>
-
-              <div className="flex flex-col items-end shrink-0">
-                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                  {report.isPrescriptionRequired ? 'Rx Prescription Required' : 'OTC Available'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* B2. CLINICAL GUIDANCE: WHEN TO GIVE & WHEN NOT TO GIVE */}
-          {(() => {
-            const med = CURATED_MEDICATIONS.find(m => 
-              report.searchedName.toLowerCase().includes(m.medicineName.toLowerCase()) ||
-              report.genericSaltName.toLowerCase().includes(m.genericSalt.toLowerCase()) ||
-              m.commonBrands.some(b => report.searchedName.toLowerCase().includes(b.toLowerCase()) || report.genericSaltName.toLowerCase().includes(b.toLowerCase()))
-            );
-
-            return (
-              <div className="p-5 sm:p-6 rounded-3xl bg-surface border border-border shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-border/80 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <HeartPulse className="w-5 h-5 text-primary" />
-                    <h3 className="text-sm sm:text-base font-bold text-ink">
-                      Clinical Administration: When to Give & Safety Rules
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                    {med ? med.emergencyRole : 'Clinical Guidance'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* When to Give */}
-                  <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
-                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex items-center space-x-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>When to Give (Indications)</span>
-                    </span>
-                    <ul className="text-xs text-ink space-y-1.5 font-medium">
-                      {med ? (
-                        med.whenToGive.map((item, idx) => (
-                          <li key={idx} className="flex items-start space-x-1.5">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>{item}</span>
-                          </li>
-                        ))
-                      ) : (
-                        <>
-                          <li className="flex items-start space-x-1.5">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Take strictly for the clinical symptoms and diagnosis prescribed by your physician.</span>
-                          </li>
-                          <li className="flex items-start space-x-1.5">
-                            <span className="text-emerald-600 font-bold">✓</span>
-                            <span>Complete the entire prescribed dosage course even if symptoms improve early.</span>
-                          </li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-
-                  {/* When NOT to Give */}
-                  <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/20 space-y-2">
-                    <span className="text-xs font-bold text-red-700 dark:text-red-300 uppercase tracking-wider flex items-center space-x-1.5">
-                      <AlertTriangle className="w-4 h-4 text-red-600" />
-                      <span>When NEVER to Give (Red Flags)</span>
-                    </span>
-                    <ul className="text-xs text-ink space-y-1.5 font-medium">
-                      {med ? (
-                        med.whenNotToGive.map((item, idx) => (
-                          <li key={idx} className="flex items-start space-x-1.5">
-                            <span className="text-red-600 font-bold">✕</span>
-                            <span>{item}</span>
-                          </li>
-                        ))
-                      ) : (
-                        <>
-                          <li className="flex items-start space-x-1.5">
-                            <span className="text-red-600 font-bold">✕</span>
-                            <span>NEVER give oral medicine to an unconscious, drowsy, or violently vomiting patient.</span>
-                          </li>
-                          <li className="flex items-start space-x-1.5">
-                            <span className="text-red-600 font-bold">✕</span>
-                            <span>DO NOT take if you have a documented allergy to this pharmaceutical class.</span>
-                          </li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-
-                {med && (
-                  <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-                    <span><strong>Timing:</strong> {med.timingAndDosage.foodRelation} • {med.timingAndDosage.frequency}</span>
-                    <span><strong>Max Safe Limit:</strong> {med.timingAndDosage.maxDailyLimit}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* C. Top Generic Alternatives Grid */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
-                  Top Verified Generic Alternatives in India
-                </h3>
-              </div>
-              <span className="text-[11px] text-ink-muted">CDSCO Approved</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {report.topGenericAlternatives.map((alt, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 shadow-2xs space-y-2 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block mb-1.5">
-                      {alt.savingsNote || 'Generic Alternative'}
-                    </span>
-                    <h4 className="text-xs sm:text-sm font-bold text-ink leading-tight">{alt.name}</h4>
-                    <p className="text-[11px] text-ink-muted mt-0.5">{alt.manufacturer}</p>
-                  </div>
-
-                  <div className="pt-2 border-t border-border/80 flex items-center justify-between">
-                    <span className="text-[10px] text-ink-muted">Approx MRP:</span>
-                    <span className="text-xs font-mono font-bold text-primary">{alt.approxPrice}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* D. "What to Tell Your Chemist" Script Card */}
-          <div className="p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-amber-700 dark:text-amber-300">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  What to Tell Your Chemist at the Counter
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCopyScript}
-                className="inline-flex items-center space-x-1 px-3 py-1 rounded-lg bg-surface border border-amber-500/40 text-xs font-semibold text-ink hover:bg-amber-500/20 cursor-pointer transition-colors"
-              >
-                {copiedScript ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Copy Script</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <p className="text-xs sm:text-sm text-ink font-medium italic leading-relaxed bg-surface/80 p-3 rounded-2xl border border-amber-500/20">
-              "{report.whatToTellChemist}"
-            </p>
-
-            <p className="text-[11px] text-ink-muted leading-relaxed">
-              💡 <em>Pharmacist tip: Under Indian drug guidelines, chemists are legally permitted to dispense generic salt equivalents of prescribed brands if requested by the patient.</em>
-            </p>
-          </div>
-
-          {/* E. Real Web Sources & Verified Links (from Firecrawl) */}
-          {report.sources && report.sources.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-primary" />
-                  <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
-                    Verified Web Sources & Pharmacy Listings
-                  </h3>
-                </div>
-                <span className="text-[10px] text-ink-muted font-mono">Live Crawl</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {report.sources.map((src, idx) => (
-                  <a
-                    key={idx}
-                    href={src.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-3.5 rounded-2xl bg-surface border border-border hover:border-primary/40 shadow-2xs space-y-1.5 transition-all group flex flex-col justify-between"
+                {result.disambiguation_options.map((opt) => (
+                  <button
+                    key={opt.query}
+                    type="button"
+                    onClick={() => executeLookup(opt.query)}
+                    className="p-4 rounded-2xl bg-base hover:bg-primary-soft/35 border border-border hover:border-primary text-left transition-colors cursor-pointer space-y-1"
                   >
-                    <div>
-                      <div className="flex items-center justify-between text-[10px] text-primary font-bold mb-1">
-                        <span className="px-2 py-0.5 rounded-md bg-primary/10">{src.sourceName}</span>
-                        <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                      </div>
-                      <h4 className="text-xs font-bold text-ink group-hover:text-primary transition-colors line-clamp-1">
-                        {src.title}
-                      </h4>
-                      {src.snippet && (
-                        <p className="text-[11px] text-ink-muted line-clamp-2 mt-1 leading-snug">
-                          {src.snippet}
-                        </p>
-                      )}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-base font-bold text-ink">{opt.brand_name}</span>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-surface border border-border text-ink-muted whitespace-nowrap">
+                        {opt.dosage_form}
+                      </span>
                     </div>
-
-                    <div className="pt-2 text-[10px] text-ink-muted truncate font-mono">
-                      {src.url.replace('https://', '')}
-                    </div>
-                  </a>
+                    <p className="text-sm font-semibold text-primary leading-snug">
+                      {opt.composition_display}
+                    </p>
+                    <p className="text-xs text-ink-muted">{opt.condition_tag}</p>
+                  </button>
                 ))}
               </div>
+            </Card>
+          )}
+
+        {/* ====================================================================
+         * EDGE STATE 2: UNKNOWN MEDICINE / UNCONFIRMED COMPOSITION ("Xyzzy 100")
+         * ==================================================================== */}
+        {!isLoading &&
+          result &&
+          (result.outcome === 'unknown_medicine' ||
+            result.outcome === 'composition_unconfirmed') && (
+            <Card className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-ink-muted shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h2 className="text-lg sm:text-xl font-bold text-ink leading-snug">
+                    We couldn&apos;t confirm what&apos;s in this medicine
+                  </h2>
+                  <p className="text-sm sm:text-base text-ink-muted leading-relaxed">
+                    We could not verify an active salt composition and strength for{' '}
+                    <q className="font-semibold text-ink">{result.query}</q> from our allowlisted official or retail sources. Because we never guess or invent prices, no price comparison is shown.
+                  </p>
+                </div>
+              </div>
+
+              {result.did_you_mean && result.did_you_mean.length > 0 ? (
+                <div className="pt-2 space-y-2">
+                  <p className="text-sm font-bold text-ink">Did you mean one of these?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.did_you_mean.map((sug) => (
+                      <button
+                        key={sug.query}
+                        type="button"
+                        onClick={() => executeLookup(sug.query)}
+                        className="inline-flex min-h-[40px] items-center gap-2 px-3.5 py-2 rounded-xl bg-base hover:bg-primary-soft/40 border border-border hover:border-primary text-sm font-semibold text-ink cursor-pointer"
+                      >
+                        <span className="font-bold text-primary">{sug.brand_name}</span>
+                        <span className="text-ink-muted">· {sug.composition_display}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-base border border-border text-sm text-ink-muted">
+                  No match. Try searching by the exact active salt name and strength printed on your medicine strip (for example, <button type="button" onClick={() => executeLookup('Paracetamol 650mg')} className="font-semibold text-primary underline cursor-pointer">Paracetamol 650mg</button> or <button type="button" onClick={() => executeLookup('Telmisartan 40mg')} className="font-semibold text-primary underline cursor-pointer">Telmisartan 40mg</button>).
+                </div>
+              )}
+            </Card>
+          )}
+
+        {/* ====================================================================
+         * EDGE STATE 3: ALL SOURCES FAILED / UNREACHABLE
+         * ==================================================================== */}
+        {!isLoading &&
+          result &&
+          result.outcome === 'no_sources_reachable' &&
+          result.identity && (
+            <div className="space-y-5">
+              <MedicineIdentityCard
+                identity={result.identity}
+                confidenceTier={result.confidence_tier}
+                confidenceReason={result.confidence_reason}
+                retrievedAt={result.retrieved_at}
+                sourcesSucceededCount={result.sources_succeeded_count}
+                sourcesCheckedCount={result.sources_checked_count}
+                fromCache={result.from_cache}
+                isOfflineFallback={result.is_offline_fallback}
+                onRecheckNow={() => executeLookup(result.query, { forceRefresh: true })}
+              />
+
+              <Card className="p-5 sm:p-6 space-y-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-alert shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-ink leading-snug">
+                      We couldn&apos;t reach price sources right now
+                    </h3>
+                    <p className="text-sm text-ink-muted leading-relaxed">
+                      All {result.sources_checked_count} checked sources timed out or were unreachable, and no cached price record was available. See the source ledger below for individual failure details.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => executeLookup(result.query, { forceRefresh: true })}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Retry price check</span>
+                  </Button>
+                </div>
+              </Card>
+
+              <SourceLedger
+                records={result.source_ledger}
+                highlightedSourceId={highlightedSourceId}
+              />
+              <MethodPanel result={result} />
             </div>
           )}
 
-          {/* F. Jan Aushadhi Kendra Locator & Action Bar */}
-          <div className="p-6 rounded-3xl bg-surface border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-3.5">
-              <div className="p-3 rounded-2xl bg-accent/20 text-accent shrink-0">
-                <Building2 className="w-6 h-6 text-accent" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-ink">Find Your Nearest Jan Aushadhi Kendra</h4>
-                <p className="text-xs text-ink-muted leading-tight mt-0.5">
-                  Over 10,000 government-subsidized generic pharmacy centers operating across India.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2.5 w-full sm:w-auto">
-              {onOpenRadar && (
-                <button
-                  type="button"
-                  onClick={onOpenRadar}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 btn-press cursor-pointer"
+        {/* ====================================================================
+         * MAIN VERIFIED RESULT FLOW (Sections B1 - B8)
+         * ==================================================================== */}
+        {!isLoading &&
+          result &&
+          result.outcome === 'success' &&
+          result.identity &&
+          result.savings && (
+            <div className="space-y-5">
+              {/* Partial source failure notice banner */}
+              {failedSourcesCount > 0 && (
+                <div
+                  role="status"
+                  className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 dark:bg-amber-950/40 dark:border-amber-800/50 dark:text-amber-200 flex items-start gap-3 text-sm"
                 >
-                  <MapPin className="w-4 h-4" />
-                  <span>Open ER & Pharmacy Radar</span>
-                </button>
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">
+                      {failedSourcesCount} of {result.sources_checked_count} sources couldn&apos;t be reached or returned no match
+                    </strong>{' '}
+                    — results below are computed from the remaining{' '}
+                    {result.sources_succeeded_count} verified source(s), and every failed or unmatched check is listed in the source ledger.
+                  </div>
+                </div>
               )}
 
-              <a
-                href="http://janaushadhi.gov.in/KendraDetails.aspx"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-dark btn-press cursor-pointer shadow-xs"
+              {/* B1. MedicineIdentityCard */}
+              <MedicineIdentityCard
+                identity={result.identity}
+                confidenceTier={result.confidence_tier}
+                confidenceReason={result.confidence_reason}
+                retrievedAt={result.retrieved_at}
+                sourcesSucceededCount={result.sources_succeeded_count}
+                sourcesCheckedCount={result.sources_checked_count}
+                fromCache={result.from_cache}
+                isOfflineFallback={result.is_offline_fallback}
+                onRecheckNow={() => executeLookup(result.query, { forceRefresh: true })}
+              />
+
+              {/* B2. PriceCompareCard */}
+              <PriceCompareCard
+                identity={result.identity}
+                savings={result.savings}
+                onInspectSource={handleInspectSource}
+              />
+
+              {/* B3. MatchTable ("Same medicine?") */}
+              <MatchTable
+                identity={result.identity}
+                cheapestGeneric={cheapestVerifiedGeneric}
+              />
+
+              {/* B4a. Verified Alternatives (sorted by per-unit price) */}
+              <section aria-labelledby="verified-alternatives-heading" className="space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <h3
+                      id="verified-alternatives-heading"
+                      className="text-lg sm:text-xl font-bold text-ink leading-snug"
+                    >
+                      Verified listings ({result.verified_alternatives.length})
+                    </h3>
+                    <p className="text-sm text-ink-muted">
+                      Identical active salt, strength, and dosage form — sorted by lowest per-unit price.
+                    </p>
+                  </div>
+                </div>
+
+                {result.verified_alternatives.length > 0 ? (
+                  <div className="space-y-3">
+                    {result.verified_alternatives.map((alt) => (
+                      <AlternativeRow
+                        key={alt.id}
+                        alternative={alt}
+                        isCriticalNeverSwitch={result.identity?.never_switch_warning.is_critical}
+                        onInspectSource={handleInspectSource}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-5 text-sm text-ink-muted">
+                    No verified same-salt, same-strength listings were returned for this query.
+                  </Card>
+                )}
+              </section>
+
+              {/* B4b. Similar but not identical (when any check is ✗ on salt, strength, or form) */}
+              {result.similar_alternatives.length > 0 && (
+                <section aria-labelledby="similar-alternatives-heading" className="space-y-3">
+                  <div>
+                    <h3
+                      id="similar-alternatives-heading"
+                      className="text-lg sm:text-xl font-bold text-ink leading-snug"
+                    >
+                      Similar but not identical ({result.similar_alternatives.length})
+                    </h3>
+                    <p className="text-sm text-ink-muted">
+                      Returned by sources during search, but excluded from price comparison because active salt, strength, or dosage form differs.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {result.similar_alternatives.map((alt) => (
+                      <AlternativeRow
+                        key={alt.id}
+                        alternative={alt}
+                        isCriticalNeverSwitch={result.identity?.never_switch_warning.is_critical}
+                        onInspectSource={handleInspectSource}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* B5. "What to ask at the counter" */}
+              <Card className="p-5 sm:p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <MessageSquare className="w-5 h-5 text-primary shrink-0" />
+                    <h3 className="text-lg sm:text-xl font-bold text-ink leading-snug">
+                      What to ask at the counter
+                    </h3>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={copiedScript ? 'primary' : 'secondary'}
+                    onClick={handleCopyCounterScript}
+                    className="whitespace-nowrap"
+                  >
+                    {copiedScript ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copy script</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <blockquote className="p-4 rounded-xl bg-base border border-border text-base font-medium text-ink leading-relaxed">
+                  {result.counter_script}
+                </blockquote>
+
+                <p className="text-sm text-ink-muted leading-relaxed">
+                  You can ask your pharmacist whether a same-salt generic is suitable. For prescription medicines, check with your doctor first.
+                </p>
+              </Card>
+
+              {/* B6. Sources & Methodology (open by default) */}
+              <section aria-label="Sources and methodology" className="space-y-5">
+                <SourceLedger
+                  records={result.source_ledger}
+                  highlightedSourceId={highlightedSourceId}
+                />
+                <MethodPanel result={result} />
+                <SourcesAndReviewFooter
+                  sources={result.source_ledger.map((rec) => ({
+                    name: `${rec.source_name} (${rec.status.toUpperCase()})`,
+                    publisher:
+                      rec.source_type === 'government'
+                        ? 'PMBI / NPPA Govt. of India'
+                        : rec.domain || 'Public Pharmacy Index',
+                    version: rec.retrieved_at ? rec.retrieved_at.slice(0, 10) : '2025-02',
+                    year: 2025,
+                    url: rec.url,
+                  }))}
+                  review={{
+                    status: 'pending_review',
+                    reviewer_role: 'Deterministic Price & Salt Verification Pipeline',
+                    next_review: '2027-06-01',
+                    note: 'Every price, salt, strength, and pack size is extracted from the cited source records above.',
+                  }}
+                  version="2.4"
+                  updatedAt="2025-02-15"
+                  documentTitle={result.identity?.brand_name || searchQuery}
+                  documentId={`med-${(result.identity?.brand_name || searchQuery).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                />
+              </section>
+            </div>
+          )}
+
+        {/* ====================================================================
+         * B7. SAFETY NOTICE (Always visible, calm neutral colours, never collapsed)
+         * ==================================================================== */}
+        <Card className="p-5 sm:p-6 bg-surface border border-border space-y-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <h3 className="text-base font-bold text-ink leading-snug">
+              Important price &amp; prescription safety notice
+            </h3>
+
+            {/* B8. "Report a wrong price or source" button */}
+            <button
+              type="button"
+              onClick={() => {
+                setReportSubmitted(false);
+                setReportNote('');
+                setIsReportOpen(true);
+              }}
+              className="inline-flex min-h-[38px] items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-base hover:bg-primary-soft/40 border border-border hover:border-primary/40 text-sm font-semibold text-ink cursor-pointer whitespace-nowrap"
+            >
+              <Flag className="w-4 h-4 text-primary shrink-0" />
+              <span>Report a wrong price or source</span>
+            </button>
+          </div>
+
+          <p className="text-sm sm:text-base text-ink-muted leading-relaxed">
+            Prices change and can differ by city and store. Confirm with your pharmacist. For prescription medicines, check with your doctor before switching. Never change or stop critical long-term medicines (heart, epilepsy, diabetes/insulin, thyroid, blood thinners, psychiatric) without your doctor&apos;s advice.
+          </p>
+        </Card>
+      </main>
+
+      {/* ====================================================================
+       * REPORT A WRONG PRICE OR SOURCE MODAL (B8)
+       * ==================================================================== */}
+      {isReportOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-price-modal-title"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-navy/70 backdrop-blur-xs p-4"
+        >
+          <div className="w-full max-w-md bg-surface rounded-[20px] border border-border shadow-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2
+                id="report-price-modal-title"
+                className="text-lg font-bold text-ink leading-snug"
               >
-                <span>Jan Aushadhi Official Portal</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+                Report a wrong price or source
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(false)}
+                aria-label="Close report form"
+                className="w-9 h-9 rounded-xl bg-base border border-border flex items-center justify-center text-ink-muted hover:text-ink cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          </div>
 
-          {/* G. Mandatory Clinical Safety Notice */}
-          <div className="p-4 rounded-2xl bg-base border border-border text-[11px] text-ink-muted space-y-1">
-            <div className="flex items-center space-x-1.5 text-alert font-bold uppercase tracking-wider">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Clinical Safety & CDSCO Compliance Notice</span>
-            </div>
-            <p className="leading-relaxed">
-              Generic medicines share identical chemical salts, strength, dosage form, and bioavailability with branded counterparts according to the CDSCO and WHO guidelines. However, never change critical chronic medications (e.g. cardiac, anti-epileptic, psychiatric, or insulin) without consulting your prescribing physician.
-            </p>
-          </div>
+            {reportSubmitted ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-200 text-sm leading-relaxed">
+                  <strong>Thank you.</strong> Your report for{' '}
+                  <strong>{result?.identity?.brand_name || searchQuery}</strong> has been logged for source verification.
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setIsReportOpen(false)}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleReportSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-ink-muted mb-1">
+                    Medicine
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={result?.identity?.brand_name || searchQuery}
+                    className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-base border border-border text-sm font-semibold text-ink"
+                  />
+                </div>
 
-        </section>
+                <div>
+                  <label
+                    htmlFor="report-issue-select"
+                    className="block text-xs font-semibold text-ink-muted mb-1"
+                  >
+                    What&apos;s wrong?
+                  </label>
+                  <select
+                    id="report-issue-select"
+                    value={reportIssueType}
+                    onChange={(e) => setReportIssueType(e.target.value)}
+                    className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-base border border-border text-sm font-medium text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="Price differs at pharmacy">Price differs at pharmacy</option>
+                    <option value="Broken or outdated source link">
+                      Broken or outdated source link
+                    </option>
+                    <option value="Salt composition or strength mismatch">
+                      Salt composition or strength mismatch
+                    </option>
+                    <option value="Pack size mismatch">Pack size mismatch</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="report-note-input"
+                    className="block text-xs font-semibold text-ink-muted mb-1"
+                  >
+                    Optional note (e.g., MRP printed on your strip)
+                  </label>
+                  <textarea
+                    id="report-note-input"
+                    rows={3}
+                    value={reportNote}
+                    onChange={(e) => setReportNote(e.target.value)}
+                    placeholder="Share the MRP, pack size, or URL you observed…"
+                    className="w-full p-3 rounded-xl bg-base border border-border text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="neutral"
+                    onClick={() => setIsReportOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="primary"
+                    disabled={isSubmittingReport}
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{isSubmittingReport ? 'Saving…' : 'Submit report'}</span>
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Prescription Camera OCR & Multi-Drug Savings Modal */}
+      {/* ====================================================================
+       * PRESCRIPTION SCANNER MODAL (With editable confirmation list)
+       * ==================================================================== */}
       <PrescriptionScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
-        onSelectMedicineForRadar={(med) => {
-          setSearchQuery(med);
-          executeSearch(med);
+        onSelectMedicineForDetail={(medName) => {
+          executeLookup(medName);
         }}
       />
-
     </div>
   );
 };

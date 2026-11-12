@@ -5,13 +5,51 @@
     <link rel="icon" type="image/png" href="/sanjeevani-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sanjeevani — First-Aid Decision Support</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,400..700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="description" content="Free, offline-capable first-aid decision support PWA for Indian schools and families with AI Guardian triage, guided CPR camera, Crowd Squad QR, Paramedic SBAR docket, and Jan Aushadhi generic medicine finder." />
+    <meta property="og:title" content="Sanjeevani — First-Aid Decision Support" />
+    <meta property="og:description" content="Free, offline-capable first-aid decision support PWA for Indian schools and families." />
   </head>
   <body class="bg-base text-ink antialiased selection:bg-primary/20 selection:text-primary">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      async function bootApp() {
+        try {
+          let hadLegacyCacheOrSw = false;
+
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            for (const key of keys) {
+              if (key !== 'sanjeevani-protocols-v3.2') {
+                await caches.delete(key);
+                hadLegacyCacheOrSw = true;
+              }
+            }
+          }
+
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const reg of regs) {
+              await reg.unregister();
+              hadLegacyCacheOrSw = true;
+            }
+          }
+
+          if (
+            (hadLegacyCacheOrSw || navigator.serviceWorker?.controller) &&
+            !sessionStorage.getItem('sanjeevani_sw_reset_v3_2')
+          ) {
+            sessionStorage.setItem('sanjeevani_sw_reset_v3_2', '1');
+            window.location.reload();
+            return;
+          }
+        } catch (err) {
+          console.warn('Cache cleanup notice:', err);
+        }
+
+        await import('/src/main.tsx');
+      }
+
+      bootApp();
+    </script>
   </body>
 </html>
-

@@ -37,11 +37,11 @@ export const EmergencyActionMatrix: React.FC<EmergencyActionMatrixProps> = ({
     {
       id: 'unconscious',
       title: 'Cardiac Arrest / CPR',
-      action: '110 BPM Chest Compressions',
+      action: 'Continuous Chest Compressions',
       icon: HeartPulse,
       color: 'text-red-400',
       bg: 'bg-red-500/15 border-red-500/30 hover:border-red-400',
-      badge: '110 BPM Metronome',
+      badge: 'CPR Audio Metronome',
       priority: 'CRITICAL 112'
     },
     {

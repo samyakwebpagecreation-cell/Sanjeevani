@@ -188,7 +188,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
 ---
 
 ### Assigned Roles Matrix
-1. **Hands-on CPR Compressor / Hemorrhage Lead** - Deliver immediate 110 BPM life support.
+1. **Hands-on CPR Compressor / Hemorrhage Lead** - Deliver immediate continuous life support.
 2. **112 Emergency Dispatcher** - Read teleprompter script to ambulance control.
 3. **AED & Trauma Kit Scout** - Retrieve defibrillator from 200m perimeter.
 4. **Ambulance Gate Flagger** - Direct incoming emergency vehicles at intersection.
@@ -256,7 +256,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
   - Oral Fluids Given: \`${oral}\`
 - **ASSESSMENT & INTERVENTIONS:**
   - Active CPR Duration: **${cprSecs} seconds**
-  - Cadence Accuracy: **${accuracy}% Compliance (110 BPM target)**
+  - Cadence Accuracy: **${accuracy}% Compliance (AHA target)**
   - Airway Protection: Clear & monitored
 - **RECOMMENDATION:** Immediate ALS transport & secondary ER trauma survey.
 

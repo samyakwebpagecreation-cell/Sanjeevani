@@ -599,7 +599,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
 
       ctx.fillStyle = '#F0A85B';
       ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
-      ctx.fillText('LOWER HALF OF BREASTBONE • 110 BPM', cx, cy + r + 22);
+      ctx.fillText('LOWER HALF OF BREASTBONE • PUSH 5-6 CM', cx, cy + r + 22);
 
       // 5. Target Depth Meter (5–6 cm)
       const gaugeX = Math.min(width - 40, cx + r + 26);
@@ -738,7 +738,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
               </span>
               <span style={{ color: 'rgba(255,255,255,0.75)' }} className="text-[10px] sm:text-xs text-white/75 block truncate">
                 {activeRole === 'injury' && 'Wound & Injury Scanner'}
-                {activeRole === 'cpr' && 'CPR Chest Placement & 110 BPM Metronome'}
+                {activeRole === 'cpr' && 'CPR Chest Placement & Audio Metronome'}
                 {activeRole === 'prescription' && 'Prescription & Medicine Strip Scanner'}
                 {activeRole === 'qr_scan' && 'In-App QR Scanner • Calling Data & .md Storage'}
               </span>
@@ -774,7 +774,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
                   title="Toggle Metronome Sound"
                 >
                   {isMetronomeAudioOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                  <span className="hidden xs:inline text-[10px]">110 BPM</span>
+                  <span className="hidden xs:inline text-[10px]">Metronome</span>
                 </button>
               </>
             )}
@@ -1037,7 +1037,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
                 <span>CPR Time: {formatTime(cprElapsedSeconds)}</span>
               </div>
               <div className="px-3 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-amber-400/40 text-xs font-bold text-amber-300">
-                110 BPM RHYTHM • PUSH 5-6 CM
+                STEADY RHYTHM • PUSH 5-6 CM
               </div>
             </div>
 

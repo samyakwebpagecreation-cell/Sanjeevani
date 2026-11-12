@@ -11,7 +11,13 @@
 
 import { generateQRCodeSVG } from '../utils/qr';
 import { audioEngine } from '../utils/audio';
-import { AI_CONFIG } from './aiService';
+import {
+  getAppLanguage,
+  getAppLanguageMeta,
+  selectBestVoiceForLanguage,
+  SupportedLanguageCode,
+  UI_TRANSLATIONS
+} from '../utils/languageStore';
 
 export type SquadRoleCategory = 'medical' | 'dispatch' | 'equipment' | 'perimeter' | 'logistics';
 export type SquadRoleStatus = 'unassigned' | 'claimed' | 'in_progress' | 'completed';
@@ -105,11 +111,11 @@ export function generateSquadRolesForIncident(
         compressor: {
           id: 'compressor',
           title: '1. Hands-on CPR Compressor',
-          subtitle: '110 BPM Rhythmic Compressions',
+          subtitle: 'Continuous Rhythmic Compressions',
           priority: 1,
           category: 'medical',
           status: 'unassigned',
-          instruction: 'Place heel of hand in the center of the chest. Lock elbows straight. Push hard and fast to 110 BPM (2 inches deep). Do not stop until paramedics arrive or swap after 2 minutes.',
+          instruction: 'Place heel of hand in the center of the chest. Lock elbows straight. Push hard and fast (5–6 cm / 2 inches deep). Do not stop until paramedics arrive or swap after 2 minutes.',
           actionType: 'metronome_cpr',
           actionPayload: { metronomeBpm: 110 }
         },
@@ -488,12 +494,66 @@ export function createBystanderSquadSession(
 }
 
 /**
+ * Localizes a SquadTaskRole into the selected Indian language (en, hi, bn, ta, mr).
+ */
+export function localizeBystanderRole(
+  role: SquadTaskRole,
+  lang: SupportedLanguageCode = getAppLanguage()
+): SquadTaskRole {
+  if (lang === 'en') return role;
+  const br = UI_TRANSLATIONS[lang]?.bystanderRoles;
+  if (!br) return role;
+
+  if (role.id === 'compressor' || role.actionType === 'metronome_cpr' || role.category === 'medical') {
+    return {
+      ...role,
+      title: br.compressorTitle,
+      subtitle: br.compressorSubtitle,
+      instruction: br.compressorInstruction
+    };
+  }
+  if (role.id === 'caller' || role.actionType === 'call_112' || role.category === 'dispatch') {
+    return {
+      ...role,
+      title: br.callerTitle,
+      subtitle: br.callerSubtitle,
+      instruction: br.callerInstruction
+    };
+  }
+  if (role.id === 'aed_scout' || role.actionType === 'search_aed' || role.category === 'equipment') {
+    return {
+      ...role,
+      title: br.aedTitle,
+      subtitle: br.aedSubtitle,
+      instruction: br.aedInstruction
+    };
+  }
+  if (role.id === 'flagger' || role.actionType === 'gate_flag' || role.category === 'logistics') {
+    return {
+      ...role,
+      title: br.flaggerTitle,
+      subtitle: br.flaggerSubtitle,
+      instruction: br.flaggerInstruction
+    };
+  }
+  if (role.id === 'airflow_guard' || role.actionType === 'crowd_control' || role.category === 'perimeter') {
+    return {
+      ...role,
+      title: br.marshalTitle,
+      subtitle: br.marshalSubtitle,
+      instruction: br.marshalInstruction
+    };
+  }
+  return role;
+}
+
+/**
  * Plays an authoritative verbal loudspeaker announcement to command onlooker attention
- * in both English and Hindi.
+ * in the selected Indian language (English, Hindi, Bengali, Tamil, or Marathi).
  */
 export function broadcastCrowdAudioAnnouncement(
   session: BystanderSquadSession,
-  language: 'en' | 'hi' | 'bilingual' = 'bilingual',
+  language: SupportedLanguageCode | 'bilingual' = 'bilingual',
   onEnd?: () => void
 ): void {
   if (!('speechSynthesis' in window)) {
@@ -511,25 +571,28 @@ export function broadcastCrowdAudioAnnouncement(
 
   window.speechSynthesis.cancel();
 
-  const englishPrompt = "Attention everyone nearby! We have an emergency medical incident. Please look at this screen, scan the QR code with your phone camera, and take your assigned task now.";
-  const hindiPrompt = "Kripya dhyan dein! Yahan ek aapatkaal hai. Sabhi log is screen par QR code ko apne phone se scan karein aur apni zimmewari lein!";
+  const activeLang =
+    language && language !== 'bilingual' && (language as SupportedLanguageCode) in UI_TRANSLATIONS
+      ? (language as SupportedLanguageCode)
+      : getAppLanguage();
 
-  let speechText = englishPrompt;
-  if (language === 'hi') {
-    speechText = hindiPrompt;
-  } else if (language === 'bilingual') {
-    speechText = `${englishPrompt} ... ${hindiPrompt}`;
-  }
+  const langMeta = getAppLanguageMeta(activeLang);
+  const localizedSpeech = UI_TRANSLATIONS[activeLang]?.crowdAnnouncementSpeech || UI_TRANSLATIONS.en.crowdAnnouncementSpeech;
+
+  const speechText =
+    activeLang === 'en'
+      ? `${UI_TRANSLATIONS.en.crowdAnnouncementSpeech} ... ${UI_TRANSLATIONS.hi.crowdAnnouncementSpeech}`
+      : localizedSpeech;
 
   const utterance = new SpeechSynthesisUtterance(speechText);
-  utterance.rate = 0.95;
-  utterance.pitch = 1.05;
+  utterance.lang = langMeta.bcp47;
+  utterance.rate = 0.94;
+  utterance.pitch = 1.03;
   utterance.volume = 1.0; // Maximum volume
 
-  const voices = window.speechSynthesis.getVoices();
-  const indVoice = voices.find((v) => v.lang.includes('en-IN') || v.lang.includes('hi-IN'));
-  if (indVoice) {
-    utterance.voice = indVoice;
+  const bestVoice = selectBestVoiceForLanguage(activeLang);
+  if (bestVoice) {
+    utterance.voice = bestVoice;
   }
 
   utterance.onend = () => {
@@ -592,7 +655,7 @@ Return ONLY a valid JSON object matching this schema without markdown or formatt
     {
       "id": "short_snake_case_id",
       "title": "Role number & title (e.g. '1. Direct Pressure Lead' or '1. Hands-on CPR Compressor')",
-      "subtitle": "Short 2-4 word focus (e.g. 'Firm Continuous Pressure' or '110 BPM Compressions')",
+      "subtitle": "Short 2-4 word focus (e.g. 'Firm Continuous Pressure' or 'Continuous Chest Compressions')",
       "priority": 1,
       "category": "medical",
       "instruction": "Specific imperative instructions for this bystander. Include what NOT to do.",
@@ -616,7 +679,7 @@ Return ONLY a valid JSON object matching this schema without markdown or formatt
 
     onProgress?.('Synthesizing direct delegation task matrix with Gemini...');
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${AI_CONFIG.apiKey}`;
+    const endpoint = '/api/gemini/generate';
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 9500);
 
@@ -624,6 +687,7 @@ Return ONLY a valid JSON object matching this schema without markdown or formatt
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        model: 'gemini-3.8-flash',
         contents: [{ parts }],
         generationConfig: {
           temperature: 0.2,

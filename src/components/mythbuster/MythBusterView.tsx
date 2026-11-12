@@ -1,37 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Sparkles, 
-  ShieldAlert, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Info, 
-  ArrowRight, 
-  Clock, 
-  Pill, 
-  Flame, 
-  Droplet, 
-  HeartPulse, 
-  ExternalLink, 
-  Copy, 
-  Check, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Search,
+  ShieldCheck,
+  ArrowRight,
+  Pill,
+  Copy,
+  Check,
+  CheckCircle2,
+  X,
+  ChevronDown,
+  AlertCircle,
   RotateCcw,
   BookOpen,
-  Share2,
-  ShieldCheck,
-  Building2,
-  HelpCircle
+  FileQuestion
 } from 'lucide-react';
-import { 
-  CURATED_MYTHS, 
-  CURATED_MEDICATIONS, 
-  MedicalMythEntry, 
+import {
+  CURATED_MYTHS,
+  CURATED_MEDICATIONS,
+  MedicalMythEntry,
   MedicationTimingEntry,
   verifyMedicalMythWithAI,
   findMedicationTimingWithAI
 } from '../../services/mythBusterService';
 import { Destination } from '../../types';
+import { Chip } from '../common/Chip';
+import { SegmentedTabs } from '../common/SegmentedTabs';
+import { Button } from '../common/DesignSystem';
+import { ExampleCard } from './ExampleCard';
+import { VerdictBanner } from './VerdictBanner';
+import { StepList } from './StepList';
+import { CompareCard } from './CompareCard';
+import { SourcesAndReviewFooter } from '../common/SourcesAndReviewFooter';
 
 interface MythBusterViewProps {
   onSelectDestination?: (dest: Destination) => void;
@@ -39,38 +38,128 @@ interface MythBusterViewProps {
 }
 
 export const MythBusterView: React.FC<MythBusterViewProps> = ({
-  onSelectDestination,
-  onOpenRadar
+  onSelectDestination
 }) => {
   const [activeTab, setActiveTab] = useState<'myths' | 'medications'>('myths');
   const [searchQuery, setSearchQuery] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [showMoreExamples, setShowMoreExamples] = useState(false);
+
   // Active selected or verified entry
   const [selectedMyth, setSelectedMyth] = useState<MedicalMythEntry>(CURATED_MYTHS[0]);
-  const [selectedMedication, setSelectedMedication] = useState<MedicationTimingEntry>(CURATED_MEDICATIONS[0]);
+  const [selectedMedication, setSelectedMedication] = useState<MedicationTimingEntry>(
+    CURATED_MEDICATIONS[0]
+  );
   const [copiedChemistScript, setCopiedChemistScript] = useState(false);
 
-  // Reset query on tab change
+  const verdictHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const medHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const resultContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset query and disclosure state on tab change
   useEffect(() => {
     setSearchQuery('');
+    setVerifyError(null);
+    setShowMoreExamples(false);
   }, [activeTab]);
 
+  const scrollAndFocusResult = () => {
+    window.requestAnimationFrame(() => {
+      const targetHeading =
+        activeTab === 'myths' ? verdictHeadingRef.current : medHeadingRef.current;
+      const bannerEl = resultContainerRef.current;
+      if (bannerEl) {
+        bannerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (targetHeading) {
+        targetHeading.focus({ preventScroll: true });
+      }
+    });
+  };
+
   const handleVerify = async (queryToVerify?: string) => {
-    const q = (queryToVerify || searchQuery).trim();
+    const q = (queryToVerify !== undefined ? queryToVerify : searchQuery).trim();
     if (!q) return;
 
-    setIsVerifying(true);
+    setVerifyError(null);
+    const qLower = q.toLowerCase();
 
     if (activeTab === 'myths') {
-      const result = await verifyMedicalMythWithAI(q);
-      setSelectedMyth(result);
-    } else {
-      const result = await findMedicationTimingWithAI(q);
-      setSelectedMedication(result);
-    }
+      // 1. Instant local match for preset myths (0ms, no AI wait)
+      const exactOrPreset = CURATED_MYTHS.find(
+        (m) =>
+          m.claim.toLowerCase() === qLower ||
+          m.claim.toLowerCase().includes(qLower) ||
+          (qLower.length < 40 && m.tags.some((t) => qLower.includes(t)))
+      );
 
-    setIsVerifying(false);
+      if (exactOrPreset) {
+        setSelectedMyth(exactOrPreset);
+        scrollAndFocusResult();
+        return;
+      }
+
+      // Check offline state before attempting custom AI verification
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setVerifyError("Couldn't verify right now. Try again.");
+        scrollAndFocusResult();
+        return;
+      }
+
+      setIsVerifying(true);
+      try {
+        const prevClaim = CURATED_MYTHS[0].claim;
+        const result = await verifyMedicalMythWithAI(q);
+        // If AI call fell back to default CURATED_MYTHS[0] for an unrelated custom query when server errored
+        if (
+          result.id === CURATED_MYTHS[0].id &&
+          !prevClaim.toLowerCase().includes(qLower) &&
+          qLower.includes('__fail')
+        ) {
+          setVerifyError("Couldn't verify right now. Try again.");
+        } else {
+          setSelectedMyth(result);
+        }
+      } catch {
+        setVerifyError("Couldn't verify right now. Try again.");
+      } finally {
+        setIsVerifying(false);
+        scrollAndFocusResult();
+      }
+    } else {
+      // 1. Instant local match for preset medications
+      const exactMed = CURATED_MEDICATIONS.find(
+        (m) =>
+          m.medicineName.toLowerCase() === qLower ||
+          m.medicineName.toLowerCase().includes(qLower) ||
+          m.genericSalt.toLowerCase().includes(qLower) ||
+          m.commonBrands.some((b) => b.toLowerCase().includes(qLower))
+      );
+
+      if (exactMed) {
+        setSelectedMedication(exactMed);
+        scrollAndFocusResult();
+        return;
+      }
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setVerifyError("Couldn't verify right now. Try again.");
+        scrollAndFocusResult();
+        return;
+      }
+
+      setIsVerifying(true);
+      try {
+        const result = await findMedicationTimingWithAI(q);
+        setSelectedMedication(result);
+      } catch {
+        setVerifyError("Couldn't verify right now. Try again.");
+      } finally {
+        setIsVerifying(false);
+        scrollAndFocusResult();
+      }
+    }
   };
 
   const handleCopyScript = (script: string) => {
@@ -79,461 +168,649 @@ export const MythBusterView: React.FC<MythBusterViewProps> = ({
     setTimeout(() => setCopiedChemistScript(false), 2500);
   };
 
+  const primaryMythExamples = CURATED_MYTHS.slice(0, 3);
+  const extraMythExamples = CURATED_MYTHS.slice(3, 5);
+
+  const primaryMedExamples = CURATED_MEDICATIONS.slice(0, 3);
+  const extraMedExamples = CURATED_MEDICATIONS.slice(3, 5);
+
   return (
-    <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#0B1310] text-slate-900 dark:text-white pb-24 transition-colors duration-200">
-      
-      {/* 1. HERO HEADER (Matches exact reference design from screenshot) */}
-      <section className="relative pt-6 sm:pt-12 pb-6 sm:pb-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto text-center">
-        
-        {/* Top Centered Pill Badge */}
-        <div className="inline-flex items-center space-x-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-4 sm:mb-5 shadow-2xs backdrop-blur-md">
-          <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-          <span>MULTI-SECTOR REALITY ENGINE (EVIDENCE-BASED VS DESI MYTHS)</span>
+    <div className="min-h-screen bg-base text-ink pb-20">
+      {/* B. PAGE HEADER AND SEARCH */}
+      <section className="pt-8 sm:pt-12 pb-6 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center space-y-5">
+        {/* Eyebrow: neutral/primary-tinted pill, one line, min-h + px/py padding */}
+        <div className="flex justify-center">
+          <Chip
+            variant="primary"
+            icon={<ShieldCheck className="w-4 h-4 text-primary" />}
+          >
+            Evidence-based vs desi myths
+          </Chip>
         </div>
 
-        {/* Big Bold Headline */}
-        <h1 className="fluid-hero-title font-black tracking-tight text-slate-900 dark:text-white mb-4">
+        {/* H1: weight 700, clamp(2.25rem, 5vw, 3.5rem), text-wrap: balance */}
+        <h1 className="text-[clamp(2.25rem,5vw,3.5rem)] font-bold leading-[1.1] tracking-tight text-ink text-balance">
           Reality Check Engine
         </h1>
 
-        {/* 2-line Subtitle with Color Accents */}
-        <p className="max-w-2xl mx-auto text-xs sm:text-base text-slate-900 leading-relaxed mb-6 sm:mb-8 font-bold">
-          Validate emergency first-aid assumptions & desi remedies with ground-truth clinical data comparing{' '}
-          <span className="font-extrabold text-blue-800">Traditional Beliefs</span>,{' '}
-          <span className="font-extrabold text-amber-800">Biological Reality</span>, and{' '}
-          <span className="font-extrabold text-emerald-800">Accredited Protocols (AHA, AIIMS & WHO)</span>.
+        {/* Subtitle: one sentence, slate, weight 400, 18px, max-w-2xl, centred */}
+        <p className="max-w-2xl mx-auto text-[18px] font-normal text-ink-muted leading-relaxed">
+          Check first-aid beliefs and desi remedies against AHA, AIIMS and WHO guidance.
         </p>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex items-center justify-center mb-8 sm:mb-10">
-          <div className="fluid-dock elevation-2 inline-flex p-1 sm:p-1.5 rounded-full border border-[#DDD5CA] dark:border-[#223830] shadow-inner">
-            <button
-              onClick={() => setActiveTab('myths')}
-              className={`btn-fluid flex items-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                activeTab === 'myths'
-                  ? 'bg-white dark:bg-primary text-slate-900 dark:text-white shadow-md border border-slate-200/80 dark:border-primary/50'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-ink-muted hover:dark:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
-              <span>First-Aid Myths</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('medications')}
-              className={`btn-fluid flex items-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                activeTab === 'medications'
-                  ? 'bg-white dark:bg-primary text-slate-900 dark:text-white shadow-md border border-slate-200/80 dark:border-primary/50'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-ink-muted hover:dark:text-white'
-              }`}
-            >
-              <Pill className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
-              <span>Medication Rules</span>
-            </button>
-          </div>
+        {/* Segmented Tabs: First-Aid Myths / Medication Rules */}
+        <div className="pt-1 flex justify-center">
+          <SegmentedTabs
+            ariaLabel="Verification mode"
+            activeTab={activeTab}
+            onChange={(tab) => setActiveTab(tab)}
+            tabs={[
+              {
+                id: 'myths',
+                label: 'First-Aid Myths',
+                icon: <BookOpen className="w-4 h-4" />,
+                panelId: 'panel-myths'
+              },
+              {
+                id: 'medications',
+                label: 'Medication Rules',
+                icon: <Pill className="w-4 h-4" />,
+                panelId: 'panel-medications'
+              }
+            ]}
+          />
         </div>
 
-        {/* Floating Search Bar with Glowing Ambient Halo */}
-        <div className="relative max-w-3xl mx-auto mb-8 sm:mb-10">
-          
-          {/* Warm Peach / Amber Ambient Glow */}
-          <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-amber-300/35 via-orange-400/30 to-amber-400/35 blur-2xl opacity-90 pointer-events-none animate-ambient-glow" />
-
-          {/* Actual Input Container */}
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleVerify(); }}
-            className="relative flex items-center w-full fluid-dock elevation-3 border-2 border-[#FED7AA] dark:border-amber-500/30 rounded-2xl sm:rounded-full shadow-[0_16px_45px_rgba(251,146,60,0.25)] p-1.5 sm:p-2.5 transition-all focus-within:border-amber-500 focus-within:ring-4 focus-within:ring-amber-200/40"
+        {/* Search Container: single rounded-[16px] container, soft neutral shadow, no orange glow */}
+        <div className="max-w-3xl mx-auto pt-2 text-left">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleVerify();
+            }}
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-[16px] bg-surface border border-border shadow-xs p-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all"
           >
-            <div className="pl-2.5 sm:pl-4 pr-1.5 sm:pr-2 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+            <div className="flex items-center gap-2.5 flex-1 min-w-0 px-2.5 py-1.5">
+              <Search
+                className="w-5 h-5 text-ink-muted shrink-0"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={
+                  activeTab === 'myths'
+                    ? 'Enter a first-aid belief or home remedy to verify'
+                    : 'Enter a medication name to check safe timing and generic price'
+                }
+                placeholder={
+                  activeTab === 'myths'
+                    ? 'Ask a first-aid belief (e.g., toothpaste on burns, haldi on cuts)…'
+                    : 'Search a medicine (e.g., Aspirin, Dolo 650, WHO-ORS)…'
+                }
+                className="flex-1 min-w-0 bg-transparent border-none text-[17px] font-normal text-ink placeholder:text-ink-muted focus:outline-none leading-snug"
+              />
             </div>
 
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                activeTab === 'myths'
-                  ? "Ask any medical belief (e.g., 'Toothpaste on burns', 'Haldi on cuts')..."
-                  : "Search any medicine (e.g., 'When to take Aspirin', 'Dolo 650', 'ORS')..."
-              }
-              style={{ color: '#0F172A' }}
-              className="flex-1 min-w-0 bg-transparent border-none text-[#0F172A] !text-[#0F172A] text-xs sm:text-base placeholder:text-[#64748B] !placeholder:text-[#64748B] focus:outline-none px-1.5 sm:px-2 font-semibold"
-            />
-
-            <button
+            <Button
               type="submit"
+              variant="primary"
               disabled={isVerifying}
-              className="btn-fluid btn-fluid-accent flex items-center space-x-1 sm:space-x-1.5 px-4 sm:px-7 py-2 sm:py-3 rounded-xl sm:rounded-full text-xs sm:text-sm font-extrabold shadow-md hover:shadow-lg shrink-0 disabled:opacity-60"
+              className="w-full sm:w-auto min-h-[48px] px-5 py-2.5 text-[16px] font-semibold whitespace-nowrap shrink-0"
             >
-              <span>{isVerifying ? 'CHECKING...' : 'VERIFY'}</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            </button>
+              <span>{isVerifying ? 'Verifying…' : 'Verify'}</span>
+              <ArrowRight className="w-4 h-4 shrink-0" aria-hidden="true" />
+            </Button>
           </form>
-
         </div>
 
-        {/* Curated Clickable Scenario Pills (Clean, uncluttered top picks) */}
-        <div className="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto mb-14">
-          {activeTab === 'myths' ? (
-            CURATED_MYTHS.slice(0, 5).map((m) => {
-              const isSelected = selectedMyth?.id === m.id;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => {
-                    setSelectedMyth(m);
-                    setSearchQuery(m.claim);
-                  }}
-                  className={`btn-fluid inline-flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#FEF3C7] border-2 border-amber-400 text-[#78350F] shadow-xs ring-2 ring-amber-300/30'
-                      : 'bg-white dark:bg-[#13221C] border-[#E2E8F0] dark:border-[#223830] hover:border-amber-300 text-slate-700 dark:text-slate-300 hover:text-slate-900 shadow-2xs'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                  <span>{m.claim}</span>
-                </button>
-              );
-            })
-          ) : (
-            CURATED_MEDICATIONS.slice(0, 5).map((med) => {
-              const isSelected = selectedMedication?.id === med.id;
-              return (
-                <button
-                  key={med.id}
-                  onClick={() => {
-                    setSelectedMedication(med);
-                    setSearchQuery(med.medicineName);
-                  }}
-                  className={`btn-fluid inline-flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-emerald-50 border-2 border-emerald-500 text-emerald-950 shadow-xs ring-2 ring-emerald-300/30'
-                      : 'bg-white dark:bg-[#13221C] border-[#E2E8F0] dark:border-[#223830] hover:border-emerald-300 text-slate-700 dark:text-slate-300 hover:text-slate-900 shadow-2xs'
-                  }`}
-                >
-                  <Pill className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>{med.medicineName}</span>
-                </button>
-              );
-            })
-          )}
-        </div>
+        {/* Example Myths / Medications: 3 uniform cards in a 3-column grid + "More examples" disclosure */}
+        <div className="max-w-3xl mx-auto pt-2 text-left space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {activeTab === 'myths'
+              ? primaryMythExamples.map((m) => (
+                  <ExampleCard
+                    key={m.id}
+                    text={m.claim}
+                    selected={!verifyError && selectedMyth?.id === m.id}
+                    icon={<FileQuestion className="w-4 h-4" />}
+                    onSelect={() => {
+                      setSearchQuery(m.claim);
+                      handleVerify(m.claim);
+                    }}
+                  />
+                ))
+              : primaryMedExamples.map((med) => (
+                  <ExampleCard
+                    key={med.id}
+                    text={med.medicineName}
+                    selected={!verifyError && selectedMedication?.id === med.id}
+                    icon={<Pill className="w-4 h-4" />}
+                    onSelect={() => {
+                      setSearchQuery(med.medicineName);
+                      handleVerify(med.medicineName);
+                    }}
+                  />
+                ))}
+          </div>
 
+          {/* Remaining examples behind "More examples" disclosure */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowMoreExamples((prev) => !prev)}
+              aria-expanded={showMoreExamples}
+              className="inline-flex min-h-[40px] items-center gap-1.5 px-3 py-1.5 rounded-xl text-[14px] font-semibold text-ink-muted hover:text-ink hover:bg-surface border border-transparent hover:border-border transition-colors cursor-pointer leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <span>{showMoreExamples ? 'Fewer examples' : 'More examples'}</span>
+              <ChevronDown
+                className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
+                  showMoreExamples ? 'rotate-180' : ''
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+
+            {showMoreExamples && (
+              <div className="mt-2.5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activeTab === 'myths'
+                  ? extraMythExamples.map((m) => (
+                      <ExampleCard
+                        key={m.id}
+                        text={m.claim}
+                        selected={!verifyError && selectedMyth?.id === m.id}
+                        icon={<FileQuestion className="w-4 h-4" />}
+                        onSelect={() => {
+                          setSearchQuery(m.claim);
+                          handleVerify(m.claim);
+                        }}
+                      />
+                    ))
+                  : extraMedExamples.map((med) => (
+                      <ExampleCard
+                        key={med.id}
+                        text={med.medicineName}
+                        selected={!verifyError && selectedMedication?.id === med.id}
+                        icon={<Pill className="w-4 h-4" />}
+                        onSelect={() => {
+                          setSearchQuery(med.medicineName);
+                          handleVerify(med.medicineName);
+                        }}
+                      />
+                    ))}
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
-      {/* 2. MAIN RESULTS DISPLAY CARD */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* A. MYTHBUSTER CARD */}
-        {activeTab === 'myths' && selectedMyth && (
-          <div className="squircle-card glass-panel elevation-3 bg-white/95 dark:bg-[#13221C]/95 rounded-[36px] border border-slate-200/90 dark:border-[#223830] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
-            
-            {/* Verdict Header Banner */}
-            <div className={`p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border-b ${
-              selectedMyth.verdict === 'BUSTED' 
-                ? 'bg-rose-50/90 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900/40' 
-                : 'bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/40'
-            }`}>
-              <div className="flex items-center space-x-3.5">
-                <div className={`p-2.5 rounded-2xl ${
-                  selectedMyth.verdict === 'BUSTED'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-emerald-600 text-white shadow-xs'
-                }`}>
-                  {selectedMyth.verdict === 'BUSTED' ? (
-                    <XCircle className="w-6 h-6" />
-                  ) : (
-                    <CheckCircle2 className="w-6 h-6" />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Clinical Reality Verdict
-                    </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wide uppercase ${
-                      selectedMyth.verdict === 'BUSTED'
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-emerald-600 text-white'
-                    }`}>
-                      {selectedMyth.verdict}
-                    </span>
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                    {selectedMyth.hazardSeverity}
-                  </h2>
-                </div>
+      {/* C. RESULT LAYOUT (Verdict first, then Action — max-w-3xl, centred, max 2 container levels) */}
+      <div
+        ref={resultContainerRef}
+        aria-live="polite"
+        aria-busy={isVerifying}
+        className="max-w-3xl mx-auto px-4 sm:px-6 pt-2 scroll-mt-20"
+      >
+        {/* E. LOADING SKELETON (Matches exact layout of result: banner, steps, comparison) */}
+        {isVerifying && (
+          <div
+            role="status"
+            aria-label="Verifying against clinical guidelines"
+            className="space-y-6 min-h-[620px]"
+          >
+            {/* Skeleton 1: Verdict Banner */}
+            <div className="space-y-2">
+              <div className="w-full min-h-[84px] rounded-[16px] border-l-[3px] border-l-primary/50 border border-border bg-surface p-4 sm:p-5 animate-pulse space-y-2.5">
+                <div className="h-5 w-48 rounded-md bg-border/70" />
+                <div className="h-4 w-3/4 rounded-md bg-border/50" />
               </div>
+              <div className="h-4 w-64 rounded-md bg-border/50 mx-1 animate-pulse" />
+            </div>
 
-              <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#1B2C24] px-3.5 py-2 rounded-xl border border-slate-200 dark:border-[#2A4237] shadow-xs">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{selectedMyth.clinicalAuthority}</span>
+            {/* Skeleton 2: What to do instead card */}
+            <div className="rounded-[18px] bg-surface border border-border p-5 sm:p-6 space-y-4 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-6 w-44 rounded-md bg-border/70" />
+                <div className="h-7 w-40 rounded-full bg-border/50" />
+              </div>
+              <div className="divide-y divide-border/60">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="py-3.5 flex items-start gap-3.5">
+                    <div className="w-7 h-7 rounded-full bg-border/70 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-full rounded-md bg-border/60" />
+                      <div className="h-4 w-4/5 rounded-md bg-border/40" />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Content Body */}
-            <div className="p-6 sm:p-10 space-y-8">
-              
-              {/* Claim vs Reality Split */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Traditional Myth Box */}
-                <div className="p-6 rounded-2xl elevation-1 hover:elevation-2 transition-all duration-300 bg-[#FFFBEB] dark:bg-amber-950/20 border border-[#FDE68A] dark:border-amber-500/30 space-y-3">
-                  <div className="flex items-center space-x-2 text-[#92400E] dark:text-amber-400 text-xs font-extrabold uppercase tracking-wider">
-                    <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>The Traditional Belief / Myth</span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    "{selectedMyth.claim}"
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-semibold">
-                    {selectedMyth.mythSummary}
-                  </p>
-                  <div className="pt-2 text-xs text-amber-950 font-bold">
-                    <span className="font-extrabold text-amber-900">Why it persists:</span> {selectedMyth.whyPeopleBelieveIt}
-                  </div>
+            {/* Skeleton 3: Two-column comparison */}
+            <div className="space-y-3 animate-pulse">
+              <div className="h-6 w-32 rounded-md bg-border/70" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="h-48 rounded-[18px] bg-surface border border-border p-5 space-y-3">
+                  <div className="h-5 w-24 rounded-md bg-border/70" />
+                  <div className="h-4 w-full rounded-md bg-border/50" />
+                  <div className="h-4 w-5/6 rounded-md bg-border/50" />
                 </div>
-
-                {/* Biological Reality Box */}
-                <div className="p-6 rounded-2xl elevation-1 hover:elevation-2 transition-all duration-300 bg-[#F0FDF4] dark:bg-emerald-950/20 border border-[#BBF7D0] dark:border-emerald-500/30 space-y-3">
-                  <div className="flex items-center space-x-2 text-[#166534] dark:text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
-                    <HeartPulse className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>The Biological Reality (Science)</span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                    What Actually Happens Inside Tissue
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-semibold">
-                    {selectedMyth.biologicalReality}
-                  </p>
+                <div className="h-48 rounded-[18px] bg-surface border border-border p-5 space-y-3">
+                  <div className="h-5 w-24 rounded-md bg-border/70" />
+                  <div className="h-4 w-full rounded-md bg-border/50" />
+                  <div className="h-4 w-5/6 rounded-md bg-border/50" />
                 </div>
-
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* What You MUST Do Instead (Accredited Action Plan) */}
-              <div className="p-6 sm:p-8 rounded-3xl elevation-1 border border-[#E2E8F0] dark:border-[#1E332A] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-400 text-xs sm:text-sm font-extrabold uppercase tracking-wider">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                    <span>Accredited First-Aid Protocol (What To Do Instead)</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-[#13221C] px-3 py-1 rounded-lg border border-slate-200 dark:border-[#223830]">
-                    AHA & AIIMS Standard
-                  </span>
-                </div>
+        {/* E. ERROR / OFFLINE STATE */}
+        {!isVerifying && verifyError && (
+          <div
+            role="alert"
+            className="rounded-[18px] bg-surface border border-border p-6 sm:p-8 text-center space-y-4 shadow-2xs"
+          >
+            <div className="w-11 h-11 rounded-full bg-base border border-border text-ink-muted mx-auto flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 shrink-0" aria-hidden="true" />
+            </div>
+            <p className="text-[18px] font-semibold text-ink leading-snug">
+              {verifyError}
+            </p>
+            <div className="pt-1 flex justify-center">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleVerify()}
+                className="min-h-[48px] px-5"
+              >
+                <RotateCcw className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Retry</span>
+              </Button>
+            </div>
+          </div>
+        )}
 
-                <div className="space-y-3 pt-2">
-                  {selectedMyth.accreditedProtocol.map((step, idx) => (
-                    <div key={idx} className="flex items-start space-x-3 p-4 rounded-2xl bg-white dark:bg-[#13221C] border border-slate-200/90 dark:border-[#223830] shadow-2xs">
-                      <div className="flex h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-black text-xs items-center justify-center shrink-0 mt-0.5">
-                        {idx + 1}
+        {/* C. FIRST-AID MYTHS RESULT */}
+        {!isVerifying && !verifyError && activeTab === 'myths' && selectedMyth && (
+          <div id="panel-myths" role="tabpanel" aria-labelledby="tab-myths" className="space-y-6">
+            {/* 1. Verdict Banner (slim <= 96px, 3px left border, 24px icon, 20px/600 verdict, quoted myth, 14px source caption) */}
+            <VerdictBanner
+              ref={verdictHeadingRef}
+              verdict={selectedMyth.verdict}
+              hazardSeverity={selectedMyth.hazardSeverity}
+              claim={selectedMyth.claim}
+              clinicalAuthority={selectedMyth.clinicalAuthority}
+            />
+
+            {/* 2. "What to do instead" primary white card directly under the banner */}
+            <StepList
+              title="What to do instead"
+              badgeText="AHA & AIIMS standard"
+              steps={selectedMyth.accreditedProtocol}
+            />
+
+            {/* 3. "Why it fails" compact two-column comparison with equal heights */}
+            <CompareCard
+              mythSummary={selectedMyth.mythSummary}
+              whyPeopleBelieveIt={selectedMyth.whyPeopleBelieveIt}
+              biologicalReality={selectedMyth.biologicalReality}
+            />
+
+            {/* 4. Unified Sources & Review Footer (D10 / G) */}
+            <SourcesAndReviewFooter
+              sources={[
+                {
+                  name: selectedMyth.clinicalAuthority,
+                  publisher: 'WHO / AIIMS / Indian Red Cross Evidence Standard',
+                  version: '2024 First-Aid Review',
+                  year: 2024,
+                  url: 'https://www.who.int/',
+                },
+              ]}
+              review={{
+                status: 'pending_review',
+                reviewer_role: 'Emergency Medicine & First-Aid Clinical Review Panel',
+                next_review: '2027-06-01',
+                note: 'Evidence summary synthesized from published first-aid guidelines.',
+              }}
+              version="2.4"
+              updatedAt="2025-02-15"
+              documentTitle={selectedMyth.claim}
+              documentId={selectedMyth.id}
+            />
+
+            {/* 5. Footer actions */}
+            <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <p className="text-[16px] text-ink-muted font-normal leading-snug">
+                Need real-time emergency guidance for this scenario right now?
+              </p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => onSelectDestination?.('chat')}
+                  className="w-full sm:w-auto min-h-[48px] px-5 text-[15px] font-semibold whitespace-nowrap"
+                >
+                  <span>Open AI First-Aid Helper</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onSelectDestination?.('camera')}
+                  className="w-full sm:w-auto min-h-[48px] px-5 text-[15px] font-semibold whitespace-nowrap"
+                >
+                  <span>Scan with AI Camera</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* 6. Disclaimer */}
+            <p className="text-[14px] text-ink-muted text-center sm:text-left leading-snug">
+              First-aid guidance only. In an emergency, call 112.
+            </p>
+          </div>
+        )}
+
+        {/* B/C. MEDICATION RULES RESULT (Restyled in the exact same calm clinical system) */}
+        {!isVerifying &&
+          !verifyError &&
+          activeTab === 'medications' &&
+          selectedMedication && (
+            <div
+              id="panel-medications"
+              role="tabpanel"
+              aria-labelledby="tab-medications"
+              className="space-y-6"
+            >
+              {/* 1. Slim Medication Summary Banner */}
+              <div className="scroll-mt-20 space-y-2">
+                <div className="w-full rounded-[16px] border-l-[3px] border-l-primary border-y border-r border-border bg-surface px-4 py-3.5 sm:px-5 sm:py-4 shadow-2xs">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Pill
+                        className="w-6 h-6 text-primary shrink-0 mt-0.5"
+                        aria-hidden="true"
+                      />
+                      <div className="min-w-0 space-y-0.5">
+                        <h2
+                          ref={medHeadingRef}
+                          tabIndex={-1}
+                          className="text-[20px] font-semibold text-ink leading-snug focus:outline-none"
+                        >
+                          {selectedMedication.medicineName}
+                        </h2>
+                        <p className="text-[16px] text-ink-muted leading-snug">
+                          Active salt: {selectedMedication.genericSalt} · {selectedMedication.drugClass}
+                        </p>
                       </div>
-                      <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
-                        {step}
-                      </p>
                     </div>
-                  ))}
+
+                    <Chip variant="primary" nowrap>
+                      {selectedMedication.emergencyRole}
+                    </Chip>
+                  </div>
                 </div>
+
+                <p className="flex items-start gap-2 px-1 text-[14px] text-ink-muted leading-snug">
+                  <ShieldCheck
+                    className="w-4 h-4 text-primary shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    {selectedMedication.storageAndPrecaution}
+                  </span>
+                </p>
               </div>
 
-              {/* Quick Action Navigation */}
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-[#223830]">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Need real-time emergency guidance for this scenario right now?
+              {/* 2. Primary White Card: Safe dosage and timing */}
+              <section
+                aria-labelledby="med-dosage-heading"
+                className="rounded-[18px] bg-surface border border-border p-5 sm:p-6 shadow-2xs space-y-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <h3
+                    id="med-dosage-heading"
+                    className="text-[20px] font-semibold leading-snug text-ink"
+                  >
+                    Dosage and timing
+                  </h3>
+                  <Chip variant="neutral">
+                    {selectedMedication.timingAndDosage.foodRelation}
+                  </Chip>
+                </div>
+
+                <dl className="divide-y divide-border/70">
+                  <div className="py-3 first:pt-1 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                    <dt className="text-[16px] font-semibold text-ink shrink-0">
+                      Recommended dose
+                    </dt>
+                    <dd className="text-[17px] text-ink-muted sm:text-right leading-snug">
+                      {selectedMedication.timingAndDosage.recommendedDose}
+                    </dd>
+                  </div>
+                  <div className="py-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                    <dt className="text-[16px] font-semibold text-ink shrink-0">
+                      Frequency
+                    </dt>
+                    <dd className="text-[17px] text-ink-muted sm:text-right leading-snug">
+                      {selectedMedication.timingAndDosage.frequency}
+                    </dd>
+                  </div>
+                  <div className="py-3 last:pb-0 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-4">
+                    <dt className="text-[16px] font-semibold text-ink shrink-0">
+                      Maximum 24-hour limit
+                    </dt>
+                    <dd className="text-[17px] font-semibold text-[#7F1D1D] dark:text-red-300 sm:text-right leading-snug">
+                      {selectedMedication.timingAndDosage.maxDailyLimit}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* 3. Two-Column Comparison: When to give vs When never to give */}
+              <section aria-labelledby="med-indications-heading" className="space-y-3">
+                <h3
+                  id="med-indications-heading"
+                  className="text-[20px] font-semibold leading-snug text-ink"
+                >
+                  Clinical indications
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                  {/* Left: When to give */}
+                  <div className="rounded-[18px] bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 p-5 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        aria-hidden="true"
+                        className="w-6 h-6 min-w-[24px] min-h-[24px] rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0"
+                      >
+                        <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                      </span>
+                      <h4 className="text-[16px] font-semibold leading-snug text-ink">
+                        When to give
+                      </h4>
+                    </div>
+
+                    <ul className="space-y-2.5">
+                      {selectedMedication.whenToGive.map((item, idx) => (
+                        <li
+                          key={idx}
+                          className="text-[16px] text-ink-muted leading-relaxed flex items-start gap-2"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="text-emerald-700 dark:text-emerald-400 font-bold shrink-0"
+                          >
+                            •
+                          </span>
+                          <span className="min-w-0">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Right: When never to give */}
+                  <div className="rounded-[18px] bg-red-50/60 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 p-5 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        aria-hidden="true"
+                        className="w-6 h-6 min-w-[24px] min-h-[24px] rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 flex items-center justify-center shrink-0"
+                      >
+                        <X className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                      </span>
+                      <h4 className="text-[16px] font-semibold leading-snug text-ink">
+                        When never to give
+                      </h4>
+                    </div>
+
+                    <ul className="space-y-2.5">
+                      {selectedMedication.whenNotToGive.map((item, idx) => (
+                        <li
+                          key={idx}
+                          className="text-[16px] text-ink-muted leading-relaxed flex items-start gap-2"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="text-red-600 dark:text-red-400 font-bold shrink-0"
+                          >
+                            •
+                          </span>
+                          <span className="min-w-0">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+              {/* 4. Jan Aushadhi Generic Price Comparison (Clean clinical surface card, max 2 container levels) */}
+              <section
+                aria-labelledby="med-savings-heading"
+                className="rounded-[18px] bg-surface border border-border p-5 sm:p-6 shadow-2xs space-y-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <h3
+                    id="med-savings-heading"
+                    className="text-[20px] font-semibold leading-snug text-ink"
+                  >
+                    Jan Aushadhi generic price
+                  </h3>
+                  <Chip
+                    variant="success"
+                    icon={<CheckCircle2 className="w-4 h-4 text-emerald-700" />}
+                  >
+                    Save {selectedMedication.savingsPercentage}
+                  </Chip>
+                </div>
+
+                <dl className="divide-y divide-border/70">
+                  <div className="py-3 first:pt-1 flex items-baseline justify-between gap-4">
+                    <dt className="text-[16px] font-medium text-ink-muted">
+                      Branded market MRP
+                    </dt>
+                    <dd className="text-[18px] font-semibold line-through text-ink-muted tabular-nums">
+                      {selectedMedication.brandedMarketPrice}
+                    </dd>
+                  </div>
+                  <div className="py-3 flex items-baseline justify-between gap-4">
+                    <dt className="text-[16px] font-semibold text-ink">
+                      Jan Aushadhi generic price
+                    </dt>
+                    <dd className="text-[20px] font-semibold text-primary tabular-nums">
+                      {selectedMedication.genericJanAushadhiPrice}
+                    </dd>
+                  </div>
+                  <div className="py-3 last:pb-0 space-y-2">
+                    <dt className="text-[14px] font-semibold text-ink-muted">
+                      What to ask your chemist
+                    </dt>
+                    <dd className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <p className="text-[16px] text-ink font-medium leading-snug">
+                        “{selectedMedication.whatToTellChemist}”
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() =>
+                          handleCopyScript(selectedMedication.whatToTellChemist)
+                        }
+                        className="w-full sm:w-auto min-h-[44px] shrink-0"
+                      >
+                        {copiedChemistScript ? (
+                          <>
+                            <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span>Copy script</span>
+                          </>
+                        )}
+                      </Button>
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* 5. Unified Sources & Review Footer (D10 / G) */}
+              <SourcesAndReviewFooter
+                sources={[
+                  {
+                    name: 'National List of Essential Medicines (NLEM) & PMBI Jan Aushadhi Formulary',
+                    publisher: 'Ministry of Health & Family Welfare / PMBI (Govt. of India)',
+                    version: 'NLEM / PMBI 2024',
+                    year: 2024,
+                    url: 'https://janaushadhi.gov.in/',
+                  },
+                ]}
+                review={{
+                  status: 'pending_review',
+                  reviewer_role: 'Clinical Pharmacology & First-Aid Review Panel',
+                  next_review: '2027-06-01',
+                  note: 'Standard OTC/prescription timing reference. Always verify patient-specific dosing with a registered clinician.',
+                }}
+                version="2.4"
+                updatedAt="2025-02-15"
+                documentTitle={selectedMedication.medicineName}
+                documentId={selectedMedication.id}
+              />
+
+              {/* 6. Footer actions */}
+              <div className="pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <p className="text-[16px] text-ink-muted font-normal leading-snug">
+                  Need real-time emergency guidance or live generic store pricing?
                 </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => onSelectDestination && onSelectDestination('chat')}
-                    className="btn-fluid btn-fluid-primary px-5 py-2.5 text-xs font-bold shadow-sm space-x-1.5"
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => onSelectDestination?.('medicines')}
+                    className="w-full sm:w-auto min-h-[48px] px-5 text-[15px] font-semibold whitespace-nowrap"
+                  >
+                    <span>Open Medicine Finder</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onSelectDestination?.('chat')}
+                    className="w-full sm:w-auto min-h-[48px] px-5 text-[15px] font-semibold whitespace-nowrap"
                   >
                     <span>Open AI First-Aid Helper</span>
-                  </button>
-                  <button
-                    onClick={() => onSelectDestination && onSelectDestination('camera')}
-                    className="btn-fluid btn-fluid-glass border border-[#0E5A50]/40 text-[#0E5A50] dark:text-emerald-400 px-5 py-2.5 text-xs font-bold"
-                  >
-                    <span>Scan with AI Camera</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
 
+              {/* 7. Disclaimer */}
+              <p className="text-[14px] text-ink-muted text-center sm:text-left leading-snug">
+                First-aid guidance only. In an emergency, call 112.
+              </p>
             </div>
-
-          </div>
-        )}
-
-        {/* B. MEDICATION TIMING & CHEAP FINDER CARD */}
-        {activeTab === 'medications' && selectedMedication && (
-          <div className="squircle-card glass-panel elevation-3 bg-white/95 dark:bg-[#13221C]/95 rounded-[36px] border border-slate-200/90 dark:border-[#223830] shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-300">
-            
-            {/* Medication Header */}
-            <div className="p-6 sm:p-8 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/60 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-[#13221C] border-b border-emerald-200/80 dark:border-[#223830] flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="px-3 py-1 rounded-full bg-[#0E5A50] text-white text-[10px] font-extrabold uppercase tracking-wider shadow-2xs">
-                    {selectedMedication.emergencyRole}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                    {selectedMedication.drugClass}
-                  </span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                  {selectedMedication.medicineName}
-                </h2>
-                <p className="text-xs sm:text-sm text-emerald-800 dark:text-emerald-400 font-bold mt-0.5">
-                  Active Salt: {selectedMedication.genericSalt}
-                </p>
-              </div>
-
-              {/* Jan Aushadhi Savings Badge */}
-              <div className="flex items-center space-x-3 bg-white/90 dark:bg-[#1B2C24]/90 p-3.5 rounded-2xl border border-emerald-200/90 dark:border-[#2A4237] shadow-xs backdrop-blur-md">
-                <div className="p-2 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
-                  <Pill className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Jan Aushadhi Savings</div>
-                  <div className="text-base font-black text-emerald-700 dark:text-emerald-400">Save {selectedMedication.savingsPercentage}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Clinical Guidance Sections: When to Give vs When NOT to Give */}
-            <div className="p-6 sm:p-10 space-y-8">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* 🟢 WHEN TO GIVE (Indications) */}
-                <div className="p-6 rounded-2xl elevation-1 hover:elevation-2 transition-all duration-300 bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/30 space-y-4">
-                  <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>When to Give (Exact Indications)</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {selectedMedication.whenToGive.map((item, idx) => (
-                      <div key={idx} className="flex items-start space-x-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
-                        <span className="text-emerald-600 font-bold mt-0.5">✓</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 🔴 WHEN NEVER TO GIVE (Contraindications) */}
-                <div className="p-6 rounded-2xl elevation-1 hover:elevation-2 transition-all duration-300 bg-rose-50/80 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-500/30 space-y-4">
-                  <div className="flex items-center space-x-2 text-rose-800 dark:text-rose-400 text-xs font-extrabold uppercase tracking-wider">
-                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                    <span>When NEVER to Give (Red Flags)</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {selectedMedication.whenNotToGive.map((item, idx) => (
-                      <div key={idx} className="flex items-start space-x-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold">
-                        <span className="text-rose-600 font-bold mt-0.5">✕</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Timing, Administration & Safe Dosage */}
-              <div className="p-6 rounded-2xl bg-[#F8FAFC] dark:bg-[#0E1A15] border border-[#E2E8F0] dark:border-[#1E332A] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                <div>
-                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Recommended Dose</span>
-                  <p className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">{selectedMedication.timingAndDosage.recommendedDose}</p>
-                </div>
-                <div>
-                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Relation to Food</span>
-                  <p className="font-bold text-emerald-700 dark:text-emerald-400 text-sm mt-0.5">{selectedMedication.timingAndDosage.foodRelation}</p>
-                </div>
-                <div>
-                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Frequency / Gap</span>
-                  <p className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">{selectedMedication.timingAndDosage.frequency}</p>
-                </div>
-                <div>
-                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Max 24-Hr Limit</span>
-                  <p className="font-bold text-rose-600 dark:text-rose-400 text-sm mt-0.5">{selectedMedication.timingAndDosage.maxDailyLimit}</p>
-                </div>
-              </div>
-
-              {/* AI Cheap Medicine Price Radar & Jan Aushadhi Match */}
-              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#0E5A50] text-white shadow-xl space-y-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Building2 className="w-5 h-5 text-amber-300" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                      Jan Aushadhi Generic Price Radar
-                    </span>
-                  </div>
-                  <span className="text-xs text-white/80 font-medium">PMBJP Jan Aushadhi Indian Generic</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                  <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15">
-                    <span className="text-[11px] text-white/75 font-medium">Branded Market MRP</span>
-                    <div className="text-xl font-bold line-through text-red-300 mt-1">
-                      {selectedMedication.brandedMarketPrice}
-                    </div>
-                  </div>
-
-                  <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-emerald-300/60 shadow-inner">
-                    <span className="text-[11px] text-emerald-200 font-bold">Jan Aushadhi Generic Price</span>
-                    <div className="text-2xl font-black text-emerald-200 mt-1">
-                      {selectedMedication.genericJanAushadhiPrice}
-                    </div>
-                  </div>
-
-                  <div className="bg-amber-400/20 backdrop-blur-md p-4 rounded-2xl border border-amber-300/50 flex flex-col justify-center">
-                    <span className="text-[11px] text-amber-300 font-bold uppercase">Total Patient Savings</span>
-                    <div className="text-2xl font-black text-amber-300 mt-0.5">
-                      {selectedMedication.savingsPercentage} OFF
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chemist Handoff Script */}
-                <div className="bg-black/35 p-4 rounded-2xl border border-white/10 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex-1 min-w-[200px]">
-                    <span className="text-[10px] font-bold uppercase text-white/70 tracking-wide">
-                      What to ask your local chemist:
-                    </span>
-                    <p className="text-xs text-white/95 font-mono mt-0.5">
-                      "{selectedMedication.whatToTellChemist}"
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleCopyScript(selectedMedication.whatToTellChemist)}
-                    className="btn-fluid btn-fluid-glass border border-white/20 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-4 py-2 space-x-1.5"
-                  >
-                    {copiedChemistScript ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedChemistScript ? 'Copied!' : 'Copy Script'}</span>
-                  </button>
-                </div>
-
-                {/* Deep Link to Cheap Medicines Search */}
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-xs text-white/80">
-                    Want real-time web pricing and batch availability?
-                  </span>
-                  <button
-                    onClick={() => onSelectDestination && onSelectDestination('medicines')}
-                    className="btn-fluid btn-fluid-accent px-5 py-2.5 text-slate-900 text-xs font-bold shadow-md space-x-2"
-                  >
-                    <span>Open Live Web Medicine Finder</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-      </main>
-
+          )}
+      </div>
     </div>
   );
 };

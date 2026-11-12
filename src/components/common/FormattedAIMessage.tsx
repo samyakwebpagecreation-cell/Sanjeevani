@@ -1,14 +1,19 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Zap, 
-  ShieldAlert, 
-  PhoneCall, 
-  AlertOctagon, 
-  CheckCircle2, 
-  Heart,
-  FastForward,
-  Activity
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  PhoneCall,
+  AlertOctagon,
+  XCircle,
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  BookOpen,
+  Activity,
+  ClipboardCheck,
+  ExternalLink,
+  Stethoscope
 } from 'lucide-react';
+import { resolveClinicalDeepDiveDoc } from '../../data/clinicalDeepDiveDocs';
+import { useAppLanguage, UI_TRANSLATIONS } from '../../utils/languageStore';
 
 interface FormattedAIMessageProps {
   text: string;
@@ -16,29 +21,39 @@ interface FormattedAIMessageProps {
   className?: string;
   animate?: boolean;
   onComplete?: () => void;
+  focusMode?: boolean;
+  showDeepDiveDoc?: boolean;
 }
 
 /**
- * Render inline markdown (bold **text**, italics *text*, backticks `text`)
+ * Render inline markdown while enforcing C.1:
+ * "Bold only on the action verb or key number inside a line, at most one bold phrase per bullet."
  */
-export function renderInlineMarkdown(text: string): React.ReactNode {
+export function renderInlineMarkdown(
+  text: string,
+  maxBolds: number = 1
+): React.ReactNode {
   if (!text) return null;
-  // Regex to match **bold**, *italic*, or `code`
   const tokens = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  let boldCount = 0;
 
   return tokens.map((token, i) => {
     if (token.startsWith('**') && token.endsWith('**')) {
       const inner = token.slice(2, -2);
-      return (
-        <strong key={i} className="font-extrabold text-inherit">
-          {inner}
-        </strong>
-      );
+      if (boldCount < maxBolds) {
+        boldCount++;
+        return (
+          <strong key={i} className="font-semibold text-slate-900">
+            {inner}
+          </strong>
+        );
+      }
+      return <span key={i}>{inner}</span>;
     }
     if (token.startsWith('*') && token.endsWith('*') && token.length > 2) {
       const inner = token.slice(1, -1);
       return (
-        <em key={i} className="italic font-semibold text-inherit">
+        <em key={i} className="italic text-inherit">
           {inner}
         </em>
       );
@@ -46,7 +61,10 @@ export function renderInlineMarkdown(text: string): React.ReactNode {
     if (token.startsWith('`') && token.endsWith('`') && token.length > 2) {
       const inner = token.slice(1, -1);
       return (
-        <code key={i} className="px-1.5 py-0.5 rounded-md bg-black/10 dark:bg-white/10 text-[11px] font-mono text-inherit border-none">
+        <code
+          key={i}
+          className="px-1.5 py-0.5 rounded bg-base border border-border text-[15px] font-mono text-slate-800"
+        >
           {inner}
         </code>
       );
@@ -55,219 +73,202 @@ export function renderInlineMarkdown(text: string): React.ReactNode {
   });
 }
 
-type SectionType = 
-  | 'intro'
+type SectionType =
   | 'immediate_action'
-  | 'step'
+  | 'steps_group'
   | 'what_not_to_do'
   | 'call_112'
-  | 'bullet'
-  | 'heading'
-  | 'paragraph';
+  | 'secondary_disclosure';
 
-interface ParsedBlock {
+export interface StepItem {
+  stepNumber: number;
+  title?: string;
+  content: string;
+}
+
+export interface DangerSubSection {
+  subheading?: string;
+  content?: string;
+  bullets: string[];
+}
+
+export interface ParsedBlock {
   type: SectionType;
   title?: string;
   content: string;
-  stepNumber?: number;
+  steps?: StepItem[];
   bullets?: string[];
+  subSections?: DangerSubSection[];
+  secondaryItems?: string[];
 }
 
 /**
- * Robustly parses markdown medical response into semantic blocks.
- * Cleans out raw ### headings, double colons ::, and handles bulleted "Immediate Priority:"
+ * Checks whether a leftover line is a generic conversational preamble
+ * (e.g., "Below is the general emergency protocol for Severe Bleeding:")
+ * so we don't clutter clinical notes with boilerplate.
+ */
+function isRedundantPreambleLine(line: string): boolean {
+  const lower = line.toLowerCase().trim();
+  if (
+    lower.includes('below is the general emergency protocol') ||
+    lower.includes('here is the verified emergency protocol') ||
+    lower.startsWith('i am sanjeevani ai guardian')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Robustly parses markdown medical response into semantic blocks:
+ * - Immediate Priority
+ * - Plain numbered list of steps
+ * - Merged single "Avoid" callout
+ * - Merged single "Call 112 / Red Flags" callout (never > 2 red blocks total)
+ * - Structured Clinical Deep-Dive & Guideline Sources document (`secondary_disclosure`).
  */
 export function parseMedicalResponse(text: string): ParsedBlock[] {
   if (!text) return [];
 
   const rawLines = text.split(/\r?\n/);
-  const blocks: ParsedBlock[] = [];
-  let currentBlock: ParsedBlock | null = null;
+  let immediatePriorityContent = '';
+  const steps: StepItem[] = [];
+  const avoidBullets: string[] = [];
+  const avoidTitle = 'Avoid / Do Not Do';
+  const redFlagBullets: string[] = [];
+  let redFlagTitle = 'Immediate 112 / Hospital Red Flags';
+  const extraRedSubSections: DangerSubSection[] = [];
+  const secondaryNotes: string[] = [];
 
-  const flushCurrent = () => {
-    if (currentBlock) {
-      blocks.push(currentBlock);
-      currentBlock = null;
-    }
-  };
+  let currentMode: 'none' | 'priority' | 'avoid' | 'call_112' | 'secondary' = 'none';
 
   for (let i = 0; i < rawLines.length; i++) {
     const rawLine = rawLines[i];
     const line = rawLine.trim();
+    if (!line) continue;
 
-    if (!line) {
-      // Empty line closes grouped blocks unless next line is a continuation bullet
-      if (currentBlock && (currentBlock.type === 'bullet' || currentBlock.type === 'call_112' || currentBlock.type === 'what_not_to_do')) {
-        const nextLine = rawLines[i + 1]?.trim() || '';
-        if (/^[•\*\-]\s+/.test(nextLine)) {
-          continue;
-        }
-      }
-      flushCurrent();
-      continue;
-    }
+    const cleanLower = line
+      .toLowerCase()
+      .replace(/^[•*\-\s#]+/, '')
+      .replace(/^\*\*|\*\*$/g, '')
+      .trim();
 
-    // 0. Check if line signifies Action Steps heading FIRST (prevents matching as immediate_action)
-    const isActionStepsHeading = /^[•\*\-\s#]*(\*{1,2})?\s*(immediate\s+)?action\s+steps[:\*\s]*/i.test(line) ||
-                                 /^[•\*\-\s#]*(\*{1,2})?\s*steps\s+to\s+take[:\*\s]*/i.test(line) ||
-                                 /^[•\*\-\s#]*(\*{1,2})?\s*action\s+steps[:\*\s]*/i.test(line);
-    if (isActionStepsHeading) {
-      flushCurrent();
-      blocks.push({
-        type: 'heading',
-        content: '⚡ Immediate Action Steps'
-      });
-      continue;
-    }
-
-    // 1. Check for Immediate Priority (Only ONE Immediate Priority card allowed per message)
-    const hasExistingPriority: boolean = blocks.some((b: ParsedBlock) => b.type === 'immediate_action') || (currentBlock !== null && currentBlock.type === 'immediate_action');
-    const immediateMatch: RegExpMatchArray | null = !hasExistingPriority && !line.toLowerCase().includes('step')
-      ? line.match(/^[•\*\-\s]*(\*{1,2})?\s*immediate\s+(priority|action)(\s*\(first\s*10\s*seconds\))?[:\*\s]*(.*)/i)
-      : null;
-    if (immediateMatch) {
-      flushCurrent();
-      const rawContent: string = immediateMatch[4] || '';
-      // Strip asterisks, colons, bullets so text doesn't end up wrapped in muted italics
-      const cleanContent: string = rawContent.replace(/^[•\*\:\s]+/, '').replace(/[\*_\s]+$/, '').trim();
-      currentBlock = {
-        type: 'immediate_action',
-        title: 'Immediate Priority (First 10 Seconds)',
-        content: cleanContent
-      };
-      if (cleanContent) {
-        flushCurrent();
-      }
-      continue;
-    }
-
-    // Accumulate into immediate_action if previous line had no content
-    if (currentBlock && currentBlock.type === 'immediate_action' && !currentBlock.content) {
-      currentBlock.content = line.replace(/^[•\*\:\s]+/, '').replace(/[\*_\s]+$/, '').trim();
-      flushCurrent();
-      continue;
-    }
-
-    // 2. Markdown Headings (#, ##, ###)
-    const headingMatch = line.match(/^#{1,6}\s*(.*)/);
-    if (headingMatch) {
-      flushCurrent();
-      const headingText = headingMatch[1].replace(/[:\s]+$/, '').replace(/[*_#]/g, '').trim();
-      const headingLower = headingText.toLowerCase();
-
-      // Check if heading signifies steps
-      if (headingLower.includes('action step') || headingLower.includes('what you should do') || headingLower.includes('steps to take')) {
-        blocks.push({
-          type: 'heading',
-          content: '⚡ Immediate Action Steps'
-        });
-        continue;
-      }
-
-      // Check if heading signifies contraindications
-      if (headingLower.includes('what not to do') || headingLower.includes('contraindication') || headingLower.includes('avoid')) {
-        currentBlock = {
-          type: 'what_not_to_do',
-          title: 'What NOT to Do (Critical Contraindications)',
-          content: '',
-          bullets: []
-        };
-        continue;
-      }
-
-      // Check if heading signifies Call 112 / Emergency
-      if (headingLower.includes('call 112') || headingLower.includes('red flag') || headingLower.includes('emergency')) {
-        currentBlock = {
-          type: 'call_112',
-          title: headingText.replace(/^⚠️\s*/, ''),
-          content: '',
-          bullets: []
-        };
-        continue;
-      }
-
-      // General heading
-      blocks.push({
-        type: 'heading',
-        content: headingText
-      });
-      continue;
-    }
-
-    // 3. "WHAT NOT TO DO" / Contraindications without markdown hashes
-    const cleanLower = line.toLowerCase().replace(/^[•\*\-\s#]+/, '');
+    // 0. Skip redundant "Action Steps" headers
     if (
+      /^(immediate\s+)?action\s+steps[:*\s]*$/i.test(cleanLower) ||
+      /^steps\s+to\s+take[:*\s]*$/i.test(cleanLower) ||
+      /^here\s+is\s+what\s+you\s+should\s+do[:*\s]*$/i.test(cleanLower)
+    ) {
+      currentMode = 'none';
+      continue;
+    }
+
+    // 1. Immediate Priority line
+    const immediateMatch =
+      !immediatePriorityContent && !cleanLower.startsWith('step')
+        ? line.match(
+            /^[•*\-\s]*(\*{1,2})?\s*immediate\s+(priority|action)(\s*\(first\s*10\s*seconds\))?[:*\s]*(.*)/i
+          )
+        : null;
+    if (immediateMatch) {
+      const rawContent = immediateMatch[4] || '';
+      const cleanContent = rawContent
+        .replace(/^[•*:\s]+/, '')
+        .replace(/[*_\s]+$/, '')
+        .trim();
+      if (cleanContent) {
+        immediatePriorityContent = cleanContent;
+        currentMode = 'none';
+      } else {
+        currentMode = 'priority';
+      }
+      continue;
+    }
+
+    if (currentMode === 'priority' && !immediatePriorityContent) {
+      immediatePriorityContent = line
+        .replace(/^[•*:\s]+/, '')
+        .replace(/[*_\s]+$/, '')
+        .trim();
+      currentMode = 'none';
+      continue;
+    }
+
+    // 2. Check for Avoid / Contraindication heading or inline "DO NOT / Avoid" line
+    const isAvoidHeading =
       cleanLower.startsWith('what not to do') ||
       cleanLower.startsWith('critical contraindications') ||
       cleanLower.startsWith('contraindications') ||
-      cleanLower.startsWith('avoid:') ||
-      cleanLower.startsWith('do not:')
-    ) {
-      flushCurrent();
-      const content = line
-        .replace(/^[•\*\-\s#]+/g, '')
+      cleanLower.startsWith('avoid / do not') ||
+      cleanLower === 'avoid' ||
+      cleanLower === 'avoid:' ||
+      cleanLower === 'do not:';
+
+    if (isAvoidHeading) {
+      currentMode = 'avoid';
+      const inlineRemainder = line
+        .replace(/^[•*\-\s#]+/g, '')
+        .replace(/^\*\*|\*\*$/g, '')
         .replace(/^what not to do:?/i, '')
         .replace(/^critical contraindications(\s*\(what not to do\))?:?/i, '')
         .replace(/^contraindications:?/i, '')
-        .replace(/^avoid:?/i, '')
+        .replace(/^avoid(\s*\/\s*do not do)?:?/i, '')
         .replace(/^do not:?/i, '')
-        .replace(/[*#]/g, '')
+        .replace(/^[:*\s]+/, '')
+        .replace(/[*#]+$/g, '')
         .trim();
-
-      currentBlock = {
-        type: 'what_not_to_do',
-        title: 'What NOT to Do',
-        content,
-        bullets: []
-      };
+      if (inlineRemainder) {
+        avoidBullets.push(inlineRemainder);
+      }
       continue;
     }
 
-    // 4. "Call 112" / Emergency Red Flags without markdown hashes
-    if (
+    // 3. Check for Call 112 / Red Flags heading
+    const isRedFlagHeading =
       (cleanLower.startsWith('call 112') ||
-       cleanLower.startsWith('when to call 112') ||
-       cleanLower.startsWith('emergency red flags') ||
-       cleanLower.startsWith('hospital red flags') ||
-       cleanLower.startsWith('immediate 112') ||
-       cleanLower.startsWith('seek immediate emergency')) &&
-      line.length < 90
-    ) {
-      flushCurrent();
-      const title = line.replace(/^[•\*\-\s#]+/, '').replace(/^\*\*|\*\*$/g, '').replace(/^⚠️\s*/, '').trim();
-      currentBlock = {
-        type: 'call_112',
-        title: title || 'Call 112 or Seek Immediate Help If:',
-        content: '',
-        bullets: []
-      };
+        cleanLower.startsWith('when to call 112') ||
+        cleanLower.startsWith('emergency red flags') ||
+        cleanLower.startsWith('hospital red flags') ||
+        cleanLower.startsWith('immediate 112') ||
+        cleanLower.startsWith('⚠️ immediate 112') ||
+        cleanLower.startsWith('seek immediate emergency')) &&
+      line.length < 95;
+
+    if (isRedFlagHeading) {
+      currentMode = 'call_112';
+      const cleanedHeading = line
+        .replace(/^[•*\-\s#]+/, '')
+        .replace(/^\*\*|\*\*$/g, '')
+        .replace(/^⚠️\s*/, '')
+        .replace(/[:\s]+$/, '')
+        .trim();
+      if (cleanedHeading) {
+        redFlagTitle = cleanedHeading;
+      }
       continue;
     }
 
-    // 5. Numbered Steps: e.g. "1. **Administer Epinephrine:** Use the auto-injector..."
-    const stepMatch = line.match(/^(\d+)[\.\)\:]\s+(.*)/);
+    // 4. Numbered Steps (1. ..., 2. ...)
+    const stepMatch = line.match(/^(\d+)[.):]\s+(.*)/);
     if (stepMatch) {
-      flushCurrent();
+      currentMode = 'none';
       const stepNum = parseInt(stepMatch[1], 10);
       const stepBody = stepMatch[2].trim();
 
-      // Check if title is inside **bold**, *italic*, or followed by a colon
-      const titleMatch = stepBody.match(/^(\*\*([^*]+)\*\*|\*([^*]+)\*|([A-Za-z0-9\s/&'-]+):)\s*[:\-–—]?\s*(.*)/);
+      const titleMatch = stepBody.match(
+        /^(\*\*([^*]+)\*\*|\*([^*]+)\*|([A-Za-z0-9\s/&'-]+):)\s*[:\-–—]?\s*(.*)/
+      );
       if (titleMatch) {
         const rawTitle = titleMatch[2] || titleMatch[3] || titleMatch[4];
-        // Strip any trailing colons or whitespace to prevent double colons (::)
         const cleanTitle = rawTitle.replace(/[:\s]+$/, '').trim();
         const cleanContent = (titleMatch[5] || '').replace(/^[:\s\-–—]+/, '').trim();
-
-        blocks.push({
-          type: 'step',
+        steps.push({
           stepNumber: stepNum,
           title: cleanTitle,
           content: cleanContent
         });
       } else {
-        blocks.push({
-          type: 'step',
+        steps.push({
           stepNumber: stepNum,
           content: stepBody
         });
@@ -275,395 +276,539 @@ export function parseMedicalResponse(text: string): ParsedBlock[] {
       continue;
     }
 
-    // 6. Bullet Points (•, *, -)
+    // 5. Standalone "DO NOT ..." or "Avoid ..." bullet or sentence anywhere in the text -> merge into Avoid callout
+    const bulletStripped = line.replace(/^[•*-]\s*/, '').replace(/\*$/g, '').trim();
+    const isStandaloneAvoidLine =
+      /^(do\s+not|don't|never|avoid)\b/i.test(bulletStripped) &&
+      currentMode !== 'call_112';
+
+    if (isStandaloneAvoidLine) {
+      avoidBullets.push(bulletStripped);
+      continue;
+    }
+
+    // 6. Bullet points under current mode
     if (line.startsWith('*') || line.startsWith('-') || line.startsWith('•')) {
-      const bulletText = line.replace(/^[•\*\-]\s*/, '').trim();
-
-      if (currentBlock && (currentBlock.type === 'call_112' || currentBlock.type === 'what_not_to_do')) {
-        currentBlock.bullets = currentBlock.bullets || [];
-        currentBlock.bullets.push(bulletText);
+      if (currentMode === 'avoid') {
+        avoidBullets.push(bulletStripped);
         continue;
       }
-
-      if (currentBlock && currentBlock.type === 'bullet') {
-        currentBlock.bullets = currentBlock.bullets || [];
-        currentBlock.bullets.push(bulletText);
+      if (currentMode === 'call_112') {
+        redFlagBullets.push(bulletStripped);
         continue;
       }
-
-      flushCurrent();
-      currentBlock = {
-        type: 'bullet',
-        content: '',
-        bullets: [bulletText]
-      };
+      if (!isRedundantPreambleLine(bulletStripped)) {
+        secondaryNotes.push(bulletStripped);
+      }
       continue;
     }
 
-    // 7. General Section Subheadings: e.g. "**Here is what you should do:**"
-    if (
-      (line.startsWith('**') && line.endsWith('**') && line.length < 60) ||
-      cleanLower.startsWith('here is what you should do')
-    ) {
-      flushCurrent();
-      const headingText = line.replace(/^\*\*|\*\*$/g, '').replace(/[:\s]+$/, '').trim();
-      blocks.push({
-        type: 'heading',
-        content: headingText
-      });
+    // 7. Plain lines under avoid or call_112 mode
+    if (currentMode === 'avoid') {
+      avoidBullets.push(bulletStripped);
+      continue;
+    }
+    if (currentMode === 'call_112') {
+      redFlagBullets.push(bulletStripped);
       continue;
     }
 
-    // 8. Accumulating content inside What NOT to Do without bullets
-    if (currentBlock && currentBlock.type === 'what_not_to_do' && !currentBlock.content) {
-      currentBlock.content = line;
-      continue;
+    // 8. Secondary material (intro greetings, guideline attributions, extra notes, post-event advice)
+    const cleanedNote = line
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/^\*|\*$/g, '')
+      .trim();
+    if (cleanedNote && !isRedundantPreambleLine(cleanedNote)) {
+      secondaryNotes.push(cleanedNote);
     }
+  }
 
-    // 9. Intro greeting block
-    if (blocks.length === 0 && !currentBlock && (cleanLower.startsWith('namaste') || cleanLower.startsWith('hello') || cleanLower.startsWith('welcome'))) {
-      blocks.push({
-        type: 'intro',
-        content: line
-      });
-      continue;
-    }
+  const result: ParsedBlock[] = [];
 
-    flushCurrent();
-    blocks.push({
-      type: 'paragraph',
-      content: line
+  if (immediatePriorityContent) {
+    result.push({
+      type: 'immediate_action',
+      title: 'Immediate priority',
+      content: immediatePriorityContent
     });
   }
 
-  flushCurrent();
-  return blocks;
+  if (steps.length > 0) {
+    result.push({
+      type: 'steps_group',
+      content: '',
+      steps
+    });
+  }
+
+  if (avoidBullets.length > 0) {
+    result.push({
+      type: 'what_not_to_do',
+      title: avoidTitle,
+      content: '',
+      bullets: avoidBullets
+    });
+  }
+
+  if (redFlagBullets.length > 0 || extraRedSubSections.length > 0) {
+    result.push({
+      type: 'call_112',
+      title: redFlagTitle,
+      content: '',
+      bullets: redFlagBullets,
+      subSections: extraRedSubSections
+    });
+  }
+
+  // Always attach the structured Clinical Deep-Dive & Guideline Sources block when a medical protocol is present
+  if (result.length === 0 && secondaryNotes.length > 0) {
+    result.push({
+      type: 'immediate_action',
+      title: 'Guidance',
+      content: secondaryNotes[0]
+    });
+    result.push({
+      type: 'secondary_disclosure',
+      title: 'Additional notes & guideline sources',
+      content: '',
+      secondaryItems: secondaryNotes.slice(1)
+    });
+  } else if (result.length > 0) {
+    result.push({
+      type: 'secondary_disclosure',
+      title: 'Additional notes & guideline sources',
+      content: '',
+      secondaryItems: secondaryNotes
+    });
+  }
+
+  return result;
 }
 
 export const FormattedAIMessage: React.FC<FormattedAIMessageProps> = ({
   text,
   onTriggerEscalation,
   className = '',
-  animate = false,
-  onComplete
+  onComplete,
+  focusMode = false,
+  showDeepDiveDoc = true
 }) => {
+  const { lang } = useAppLanguage();
+  const copy = UI_TRANSLATIONS[lang];
   const blocks = useMemo(() => parseMedicalResponse(text), [text]);
+  const deepDiveDoc = useMemo(() => resolveClinicalDeepDiveDoc(text), [text]);
+  const stepsBlock = useMemo(
+    () => blocks.find((b) => b.type === 'steps_group'),
+    [blocks]
+  );
+  const stepItems = stepsBlock?.steps || [];
+  const totalSteps = stepItems.length;
 
-  // Identify step blocks vs pre-step vs post-step blocks
-  const stepBlocks = useMemo(() => blocks.filter(b => b.type === 'step'), [blocks]);
-  const totalSteps = stepBlocks.length;
+  const [focusedStepIdx, setFocusedStepIdx] = useState(0);
 
-  // Immediate priority / intro text for word-by-word streaming
-  const priorityBlock = useMemo(() => blocks.find(b => b.type === 'immediate_action' || b.type === 'intro'), [blocks]);
-  const priorityWords = useMemo(() => {
-    if (!priorityBlock || !priorityBlock.content) return [];
-    return priorityBlock.content.split(/\s+/).filter(Boolean);
-  }, [priorityBlock]);
-
-  // Animation states
-  const [revealedWords, setRevealedWords] = useState<number>(() => (animate && priorityWords.length > 0 ? 0 : 9999));
-  const [visibleStepCount, setVisibleStepCount] = useState<number>(() => (animate ? 0 : totalSteps));
-  const [showPostSteps, setShowPostSteps] = useState<boolean>(() => !animate);
-  const [isSkipped, setIsSkipped] = useState<boolean>(() => !animate);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-
-  // Trigger onComplete when all cards are shown
   useEffect(() => {
-    if (showPostSteps) {
-      onCompleteRef.current?.();
-    }
-  }, [showPostSteps]);
+    setFocusedStepIdx(0);
+  }, [text]);
 
-  // Phase 1: Word-by-Word streaming for Immediate Priority / Intro (calm ~38ms cadence)
   useEffect(() => {
-    if (!animate || isSkipped || priorityWords.length === 0) {
-      setRevealedWords(9999);
-      return;
-    }
-
-    let wordIdx = 0;
-    const wordInterval = setInterval(() => {
-      wordIdx++;
-      setRevealedWords(wordIdx);
-      if (wordIdx >= priorityWords.length) {
-        clearInterval(wordInterval);
-      }
-    }, 38);
-
-    return () => clearInterval(wordInterval);
-  }, [animate, isSkipped, priorityWords.length]);
-
-  // Phase 2: Card-wise generation with 1.5-second break between each step card
-  useEffect(() => {
-    if (!animate || isSkipped) {
-      setVisibleStepCount(totalSteps);
-      setShowPostSteps(true);
-      return;
-    }
-
-    // Wait until priority words are streamed (or if none, start immediately)
-    const introDelay = priorityWords.length > 0 ? Math.min(1800, priorityWords.length * 38 + 250) : 100;
-
-    const startTimer = setTimeout(() => {
-      if (totalSteps === 0) {
-        setShowPostSteps(true);
-        return;
-      }
-
-      // Step 1 appears immediately
-      setVisibleStepCount(1);
-
-      // Remaining steps appear one by one with a 1.5-second (1500ms) pause
-      let currentStep = 1;
-      const stepInterval = setInterval(() => {
-        currentStep++;
-        setVisibleStepCount(currentStep);
-
-        if (currentStep >= totalSteps) {
-          clearInterval(stepInterval);
-          // Wait 600ms after last card before revealing contraindications and triggering completion
-          setTimeout(() => {
-            setShowPostSteps(true);
-          }, 600);
-        }
-      }, 1500); // EXACT 1.5-SECOND BREAK PER USER SPECIFICATION
-
-      return () => clearInterval(stepInterval);
-    }, introDelay);
-
-    return () => clearTimeout(startTimer);
-  }, [animate, isSkipped, totalSteps, priorityWords.length]);
-
-  const handleSkipAnimation = () => {
-    setIsSkipped(true);
-    setRevealedWords(9999);
-    setVisibleStepCount(totalSteps);
-    setShowPostSteps(true);
-    onCompleteRef.current?.();
-  };
+    onComplete?.();
+  }, [text, onComplete]);
 
   if (!text) return null;
 
-  let currentStepRenderIndex = 0;
-
-  return (
-    <div className={`space-y-4 text-ink leading-relaxed ${className}`}>
-      {/* Rescuer fast-forward toggle if animation is running */}
-      {animate && !showPostSteps && (
-        <div className="flex items-center justify-between py-1 px-1">
-          <div className="flex items-center space-x-2 text-[11px] font-mono text-primary font-bold">
-            <Activity className="w-3.5 h-3.5 animate-pulse text-accent" />
-            <span>Paced Step Guide • 1.5s Interval</span>
+  // Shared Danger Callout Renderer (Section C)
+  const renderDangerBlock = (block: ParsedBlock, key: React.Key) => {
+    const isCall112 = block.type === 'call_112';
+    return (
+      <div
+        key={key}
+        className="max-w-[68ch] rounded-xl border border-red-200 border-l-[3px] border-l-red-600 bg-red-50 px-4 py-3 text-[#7F1D1D] space-y-2"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[16px] font-semibold text-[#7F1D1D] leading-snug">
+            {isCall112 ? (
+              <AlertOctagon className="w-5 h-5 text-red-700 shrink-0" aria-hidden="true" />
+            ) : (
+              <XCircle className="w-5 h-5 text-red-700 shrink-0" aria-hidden="true" />
+            )}
+            <span>
+              {isCall112
+                ? copy.call112NowIf
+                : copy.whatNotToDoHeading}
+            </span>
           </div>
-          <button
-            onClick={handleSkipAnimation}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-base hover:bg-border/60 text-ink text-[11px] font-bold border border-border/80 cursor-pointer transition-all shadow-2xs"
-            title="Show all cards immediately"
+
+          {isCall112 && onTriggerEscalation && (
+            <button
+              type="button"
+              onClick={() => onTriggerEscalation('AI Emergency Red Flags Triggered')}
+              className="min-h-[40px] px-3.5 py-1.5 rounded-lg bg-alert hover:bg-alert-dark text-white text-[14px] font-semibold leading-snug inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alert"
+            >
+              <PhoneCall className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>Call 112</span>
+            </button>
+          )}
+        </div>
+
+        {block.bullets && block.bullets.length > 0 && (
+          <ul className="space-y-2 text-[16px] leading-snug text-[#7F1D1D]">
+            {block.bullets.map((b, bIdx) => (
+              <li key={bIdx} className="flex items-start gap-2">
+                <span className="font-semibold text-red-700 shrink-0" aria-hidden="true">
+                  •
+                </span>
+                <span>{renderInlineMarkdown(b, 1)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {block.subSections &&
+          block.subSections.map((sub, sIdx) => (
+            <div key={sIdx} className="pt-2 border-t border-red-200/80 space-y-1.5">
+              {sub.subheading && (
+                <div className="text-[15px] font-semibold text-[#7F1D1D]">
+                  {sub.subheading}
+                </div>
+              )}
+              <ul className="space-y-2 text-[16px] leading-snug text-[#7F1D1D]">
+                {sub.bullets.map((b, bIdx) => (
+                  <li key={bIdx} className="flex items-start gap-2">
+                    <span className="font-semibold text-red-700 shrink-0" aria-hidden="true">
+                      •
+                    </span>
+                    <span>{renderInlineMarkdown(b, 1)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+      </div>
+    );
+  };
+
+  /* ==========================================================================
+   * FOCUS MODE: One Step at a Time
+   * ========================================================================== */
+  if (focusMode && totalSteps > 0) {
+    const activeStep = stepItems[Math.min(focusedStepIdx, totalSteps - 1)];
+    const avoidBlock = blocks.find((b) => b.type === 'what_not_to_do');
+    const call112Block = blocks.find((b) => b.type === 'call_112');
+
+    return (
+      <div className={`space-y-4 text-slate-800 max-w-[68ch] ${className}`}>
+        <div className="flex items-center justify-between gap-2 text-[14px] font-semibold text-ink-muted tabular-nums">
+          <span>
+            Step {focusedStepIdx + 1} of {totalSteps}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {stepItems.map((_, i) => (
+              <span
+                key={i}
+                aria-hidden="true"
+                className={`h-1.5 rounded-full transition-all duration-150 ${
+                  i === focusedStepIdx ? 'w-5 bg-primary' : 'w-1.5 bg-border'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3 py-2">
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white text-[14px] font-semibold tabular-nums mt-0.5"
           >
-            <FastForward className="w-3 h-3 text-accent" />
-            <span>Show All Steps</span>
+            {activeStep.stepNumber || focusedStepIdx + 1}
+          </span>
+          <div className="text-[18px] leading-[1.55] font-medium text-slate-800 min-w-0 flex-1">
+            {activeStep.title ? (
+              <>
+                <strong className="font-semibold text-slate-900 mr-1.5">
+                  {activeStep.title.replace(/\*\*/g, '')}:
+                </strong>
+                <span>{renderInlineMarkdown(activeStep.content, 0)}</span>
+              </>
+            ) : (
+              <span>{renderInlineMarkdown(activeStep.content, 1)}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            disabled={focusedStepIdx === 0}
+            onClick={() => setFocusedStepIdx((prev) => Math.max(0, prev - 1))}
+            className="min-h-[48px] px-4 py-2.5 rounded-xl bg-base hover:bg-primary-soft border border-border text-[15px] font-semibold text-ink flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Previous step</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={focusedStepIdx >= totalSteps - 1}
+            onClick={() =>
+              setFocusedStepIdx((prev) => Math.min(totalSteps - 1, prev + 1))
+            }
+            className="min-h-[48px] px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-[15px] font-semibold flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span>Next step</span>
+            <ArrowRight className="w-4 h-4 shrink-0" aria-hidden="true" />
           </button>
         </div>
-      )}
 
+        {avoidBlock && renderDangerBlock(avoidBlock, 'focus-avoid')}
+        {call112Block && renderDangerBlock(call112Block, 'focus-112')}
+      </div>
+    );
+  }
+
+  /* ==========================================================================
+   * STANDARD READABLE VIEW (Section C)
+   * ========================================================================== */
+  return (
+    <div className={`space-y-4 text-[17px] leading-[1.6] font-normal text-slate-800 max-w-[68ch] ${className}`}>
       {blocks.map((block, index) => {
-        // --- 1. INTRO / REASSURANCE ---
-        if (block.type === 'intro') {
-          const words = block.content.split(/\s+/).filter(Boolean);
-          const visibleIntroText = isSkipped || !animate 
-            ? block.content 
-            : words.slice(0, revealedWords).join(' ');
-
-          return (
-            <div
-              key={index}
-              className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 border-2 border-emerald-500/40 text-[#064E3B] dark:!text-emerald-100 flex items-start space-x-3 shadow-xs animate-in fade-in duration-300"
-              style={{ color: '#064E3B' }}
-            >
-              <Heart className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" fill="currentColor" fillOpacity={0.25} />
-              <div className="leading-relaxed font-semibold text-sm sm:text-base text-[#064E3B] dark:!text-emerald-100" style={{ color: '#064E3B' }}>
-                {renderInlineMarkdown(visibleIntroText)}
-                {animate && !isSkipped && revealedWords < words.length && (
-                  <span className="inline-block w-1.5 h-4 ml-1 bg-emerald-600 animate-pulse align-middle" />
-                )}
-              </div>
-            </div>
-          );
-        }
-
-        // --- 2. IMMEDIATE PRIORITY CARD (FIRST 10 SECONDS) ---
+        // 1. Immediate Priority
         if (block.type === 'immediate_action') {
-          const words = block.content.split(/\s+/).filter(Boolean);
-          const visiblePriorityText = isSkipped || !animate 
-            ? block.content 
-            : words.slice(0, revealedWords).join(' ');
-
           return (
-            <div
-              key={index}
-              className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/90 border-2 border-amber-500/80 text-[#451A03] dark:!text-amber-100 space-y-2.5 shadow-sm animate-in fade-in duration-300"
-              style={{ color: '#451A03' }}
-            >
-              <div className="flex items-center space-x-2 text-xs font-black text-amber-900 dark:!text-amber-300 uppercase tracking-wider">
-                <div className="p-1 rounded-lg bg-amber-500 text-white shadow-xs">
-                  <Zap className="w-4 h-4" fill="currentColor" />
-                </div>
-                <span className="font-extrabold tracking-wide">⚡ {block.title || 'Immediate Priority (First 10 Seconds)'}</span>
-              </div>
-              <div 
-                className="text-sm sm:text-base font-bold text-[#451A03] dark:!text-amber-100 leading-relaxed pl-7"
-                style={{ color: '#451A03' }}
-              >
-                {renderInlineMarkdown(visiblePriorityText)}
-                {animate && !isSkipped && revealedWords < words.length && (
-                  <span className="inline-block w-2 h-4 ml-1 bg-amber-600 animate-pulse align-middle" />
-                )}
-              </div>
-            </div>
+            <p key={index} className="text-[17px] leading-[1.6] font-normal text-slate-800">
+              <strong className="font-semibold text-slate-900 mr-1.5">
+                {copy.doThisNow}:
+              </strong>
+              <span>{renderInlineMarkdown(block.content, 0)}</span>
+            </p>
           );
         }
 
-        // --- 3. NUMBERED STEP CARD (APPEARS 1-BY-1 WITH 1.5S PAUSE) ---
-        if (block.type === 'step') {
-          currentStepRenderIndex++;
-          const isCardVisible = !animate || isSkipped || currentStepRenderIndex <= visibleStepCount;
-
-          if (!isCardVisible) return null;
-
+        // 2. Plain Numbered List of Steps (28px numeral circles in primary, no card per step)
+        if (block.type === 'steps_group' && block.steps) {
           return (
-            <div
-              key={index}
-              className="flex items-start space-x-3.5 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13221C] border-2 border-[#DCE3E1] dark:border-[#223830] text-[#0F172A] dark:!text-slate-100 shadow-xs transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 hover:border-primary/50"
-              style={{ color: '#0F172A' }}
-            >
-              <span className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-white text-xs sm:text-sm font-black font-mono shadow-xs">
-                {block.stepNumber || currentStepRenderIndex}
-              </span>
-              <div className="text-sm sm:text-base leading-relaxed space-y-1">
-                {block.title && (
-                  <span className="font-black text-[#0E5A50] dark:!text-emerald-400 mr-2 text-[14px] sm:text-[15px] block sm:inline" style={{ color: '#0E5A50' }}>
-                    {renderInlineMarkdown(block.title)}:
-                  </span>
-                )}
-                <span className="text-[#1E293B] dark:!text-slate-200 font-medium" style={{ color: '#1E293B' }}>
-                  {renderInlineMarkdown(block.content)}
-                </span>
-              </div>
-            </div>
-          );
-        }
-
-        // Post-step blocks only appear after all step cards are revealed
-        if (!showPostSteps && !isSkipped && animate) {
-          return null;
-        }
-
-        // --- 4. WHAT NOT TO DO CARD (CONTRAINDICATIONS) ---
-        if (block.type === 'what_not_to_do') {
-          return (
-            <div
-              key={index}
-              className="p-4 sm:p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border-2 border-rose-500/40 text-[#881337] dark:!text-rose-100 space-y-2.5 shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-400"
-              style={{ color: '#881337' }}
-            >
-              <div className="flex items-center space-x-2 text-rose-700 dark:text-rose-300 text-xs font-black uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span>⚠️ {block.title || 'What NOT to Do (Critical Contraindications)'}</span>
-              </div>
-              {block.content && (
-                <p className="text-sm leading-relaxed text-[#4C0519] dark:!text-rose-100 font-bold pl-6" style={{ color: '#4C0519' }}>
-                  {renderInlineMarkdown(block.content)}
-                </p>
-              )}
-              {block.bullets && block.bullets.length > 0 && (
-                <ul className="space-y-2 pl-6 text-xs sm:text-sm text-[#4C0519] dark:!text-rose-100" style={{ color: '#4C0519' }}>
-                  {block.bullets.map((b, bIdx) => (
-                    <li key={bIdx} className="flex items-start space-x-2">
-                      <span className="text-rose-600 font-extrabold text-base leading-none">•</span>
-                      <span className="font-semibold">{renderInlineMarkdown(b)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          );
-        }
-
-        // --- 5. CALL 112 / EMERGENCY ALERT CARD ---
-        if (block.type === 'call_112') {
-          return (
-            <div
-              key={index}
-              className="p-5 sm:p-6 rounded-2xl bg-red-50 dark:bg-red-950/80 border-2 border-red-500 text-[#450A0A] dark:!text-red-100 space-y-3.5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-400"
-              style={{ color: '#450A0A' }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-red-200 dark:border-red-800">
-                <div className="flex items-center space-x-2 text-red-700 dark:text-red-300 font-black text-xs sm:text-sm">
-                  <AlertOctagon className="w-5 h-5 shrink-0" />
-                  <span>{block.title || 'Call 112 or Seek Immediate Help If:'}</span>
-                </div>
-
-                {onTriggerEscalation && (
-                  <button
-                    onClick={() => onTriggerEscalation('AI Emergency Red Flags Triggered')}
-                    className="self-start sm:self-auto inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-red-600 text-white text-xs font-extrabold shadow-md hover:bg-red-700 btn-press animate-pulse cursor-pointer"
+            <ol key={index} className="space-y-2.5 list-none pl-0">
+              {block.steps.map((step, sIdx) => (
+                <li key={sIdx} className="flex items-start gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-white text-[14px] font-semibold tabular-nums mt-0.5"
                   >
-                    <PhoneCall className="w-3.5 h-3.5" />
-                    <span>Call 112 Emergency</span>
-                  </button>
-                )}
-              </div>
-
-              {block.bullets && block.bullets.length > 0 && (
-                <ul className="space-y-1.5 text-xs sm:text-sm text-[#450A0A] dark:!text-red-100" style={{ color: '#450A0A' }}>
-                  {block.bullets.map((b, bIdx) => (
-                    <li key={bIdx} className="flex items-start space-x-2">
-                      <span className="text-red-600 font-black mt-0.5">•</span>
-                      <span className="font-bold">{renderInlineMarkdown(b)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {block.content && (
-                <p className="text-xs sm:text-sm leading-relaxed text-[#450A0A] dark:!text-red-100 font-bold" style={{ color: '#450A0A' }}>
-                  {renderInlineMarkdown(block.content)}
-                </p>
-              )}
-            </div>
-          );
-        }
-
-        // --- 6. SECTION HEADING ---
-        if (block.type === 'heading') {
-          return (
-            <div key={index} className="pt-2 text-xs font-black uppercase tracking-wider text-[#0E5A50] dark:!text-emerald-400 flex items-center space-x-1.5" style={{ color: '#0E5A50' }}>
-              <span>{renderInlineMarkdown(block.content)}</span>
-            </div>
-          );
-        }
-
-        // --- 7. REGULAR BULLETS ---
-        if (block.type === 'bullet') {
-          return (
-            <ul key={index} className="space-y-1.5 pl-2 text-xs sm:text-sm text-[#0F172A] dark:!text-slate-100" style={{ color: '#0F172A' }}>
-              {block.bullets?.map((b, bIdx) => (
-                <li key={bIdx} className="flex items-start space-x-2">
-                  <span className="text-primary font-bold">•</span>
-                  <span className="font-semibold">{renderInlineMarkdown(b)}</span>
+                    {step.stepNumber || sIdx + 1}
+                  </span>
+                  <div className="text-[18px] leading-[1.55] font-medium text-slate-800 min-w-0 flex-1">
+                    {step.title ? (
+                      <>
+                        <strong className="font-semibold text-slate-900 mr-1.5">
+                          {step.title.replace(/\*\*/g, '')}:
+                        </strong>
+                        <span>{renderInlineMarkdown(step.content, 0)}</span>
+                      </>
+                    ) : (
+                      <span>{renderInlineMarkdown(step.content, 1)}</span>
+                    )}
+                  </div>
                 </li>
               ))}
-            </ul>
+            </ol>
           );
         }
 
-        // --- 8. GENERAL PARAGRAPH ---
-        return (
-          <p key={index} className="text-xs sm:text-sm leading-relaxed text-[#1E293B] dark:!text-slate-200 font-medium" style={{ color: '#1E293B' }}>
-            {renderInlineMarkdown(block.content)}
-          </p>
-        );
+        // 3. Avoid Callout & 4. Red Flags Callout (Shared Danger Style, max 2 total)
+        if (block.type === 'what_not_to_do' || block.type === 'call_112') {
+          return renderDangerBlock(block, index);
+        }
+
+        // 5. Well-Formatted Clinical Deep-Dive Document & Accredited Guideline Sources
+        if (block.type === 'secondary_disclosure' && showDeepDiveDoc) {
+          const customNotes = block.secondaryItems || [];
+
+          return (
+            <details
+              key={index}
+              open
+              data-testid="clinical-deep-dive-doc"
+              className="group rounded-2xl border border-border bg-surface shadow-2xs overflow-hidden text-[15px] text-slate-700"
+            >
+              <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none bg-base/70 hover:bg-primary-soft/30 transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    aria-hidden="true"
+                    className="w-8 h-8 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <span className="block font-bold text-[15px] text-ink leading-snug">
+                      {block.title || 'Additional notes & guideline sources'}
+                    </span>
+                    <span className="block text-xs font-medium text-ink-muted leading-snug">
+                      {deepDiveDoc.classification}
+                    </span>
+                  </div>
+                </div>
+
+                <ChevronDown
+                  className="w-4 h-4 text-ink-muted shrink-0 transition-transform duration-150 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+
+              <div className="p-4 sm:p-5 border-t border-border space-y-5 text-[15px] leading-relaxed text-slate-800">
+                {/* Optional AI situation-specific notes */}
+                {customNotes.length > 0 && (
+                  <div className="p-3.5 rounded-xl bg-primary-soft/35 border border-primary/20 space-y-1.5">
+                    <div className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Triage &amp; Situation Note
+                    </div>
+                    <ul className="space-y-1.5 text-[15px] leading-snug text-ink">
+                      {customNotes.map((item, nIdx) => (
+                        <li key={nIdx}>{renderInlineMarkdown(item, 2)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Document Title & Clinical Overview */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                    <Stethoscope className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>In-Depth Clinical Reference</span>
+                  </div>
+                  <h4 className="text-[17px] font-bold text-ink leading-snug">
+                    {deepDiveDoc.title}
+                  </h4>
+                  <p className="text-[15px] text-slate-700 leading-relaxed">
+                    {deepDiveDoc.clinicalSummary}
+                  </p>
+                </div>
+
+                {/* Section A: Why Each Step Works (Pathophysiology & Clinical Pearls) */}
+                <div className="space-y-3">
+                  <h5 className="text-sm font-bold text-ink uppercase tracking-wider">
+                    1. Clinical Rationale — Why Each Step Works
+                  </h5>
+                  <div className="space-y-2.5">
+                    {deepDiveDoc.pathophysiologySteps.map((pStep, pIdx) => (
+                      <div
+                        key={pIdx}
+                        className="p-3.5 rounded-xl bg-base border border-border space-y-1.5"
+                      >
+                        <div className="font-bold text-[15px] text-ink leading-snug">
+                          {pIdx + 1}. {pStep.title}
+                        </div>
+                        <p className="text-[14px] text-slate-700 leading-relaxed">
+                          <strong className="font-semibold text-ink">Mechanism:</strong>{' '}
+                          {pStep.mechanism}
+                        </p>
+                        <p className="text-[14px] text-primary leading-relaxed">
+                          <strong className="font-semibold">Clinical pearl:</strong>{' '}
+                          {pStep.clinicalPearl}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section B: Vitals & Perfusion Monitoring Matrix */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    <h5 className="text-sm font-bold text-ink uppercase tracking-wider">
+                      2. What to Monitor Every 2–3 Minutes Until Help Arrives
+                    </h5>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {deepDiveDoc.monitoringChecklist.map((mItem, mIdx) => (
+                      <div
+                        key={mIdx}
+                        className="p-3 rounded-xl bg-base border border-border space-y-1.5 text-[14px]"
+                      >
+                        <div className="font-bold text-ink">{mItem.metric}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                          <div className="p-2 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-emerald-950">
+                            <span className="block text-xs font-bold uppercase text-emerald-800">
+                              Stable target
+                            </span>
+                            <span className="leading-snug">{mItem.normalTarget}</span>
+                          </div>
+                          <div className="p-2 rounded-lg bg-red-50/80 border border-red-200/80 text-[#7F1D1D]">
+                            <span className="block text-xs font-bold uppercase text-red-800">
+                              Escalation / shock sign
+                            </span>
+                            <span className="leading-snug">{mItem.dangerThreshold}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section C: Paramedic Handover Checklist (SBAR) */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+                    <h5 className="text-sm font-bold text-ink uppercase tracking-wider">
+                      3. What to Report to the 112 Paramedic Crew
+                    </h5>
+                  </div>
+                  <ul className="p-3.5 rounded-xl bg-base border border-border space-y-1.5 text-[14px] text-slate-700">
+                    {deepDiveDoc.paramedicHandoverPoints.map((pt, hIdx) => (
+                      <li key={hIdx} className="flex items-start gap-2">
+                        <span className="font-bold text-primary shrink-0">•</span>
+                        <span className="leading-snug">{pt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Section D: Accredited Clinical Guideline Resources (with external links) */}
+                <div className="space-y-2.5">
+                  <h5 className="text-sm font-bold text-ink uppercase tracking-wider">
+                    4. Accredited Clinical Guidelines &amp; Official Resources
+                  </h5>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {deepDiveDoc.resources.map((res, rIdx) => (
+                      <div
+                        key={rIdx}
+                        className="p-3.5 rounded-xl bg-base border border-border flex flex-col sm:flex-row sm:items-start justify-between gap-3"
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full bg-primary-soft text-primary text-xs font-bold whitespace-nowrap">
+                              {res.badge}
+                            </span>
+                            <span className="text-xs font-semibold text-ink-muted">
+                              {res.organization} · {res.yearOrEdition}
+                            </span>
+                          </div>
+                          <div className="font-bold text-[15px] text-ink leading-snug">
+                            {res.title}
+                          </div>
+                          <p className="text-[13px] text-slate-600 leading-relaxed">
+                            {res.summary}
+                          </p>
+                        </div>
+
+                        <a
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-[36px] items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface hover:bg-primary-soft/50 border border-border hover:border-primary/40 text-xs font-bold text-primary transition-colors whitespace-nowrap shrink-0 self-start"
+                        >
+                          <span>Open resource</span>
+                          <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
+          );
+        }
+
+        return null;
       })}
     </div>
   );
