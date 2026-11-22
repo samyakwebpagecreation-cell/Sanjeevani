@@ -17,7 +17,8 @@ import {
   Pill,
   Camera,
   Sparkles,
-  QrCode
+  QrCode,
+  Leaf
 } from 'lucide-react';
 import { Destination } from '../../types';
 import { useAuth } from '../../firebase/authContext';
@@ -98,9 +99,16 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     {
       id: 'handoff',
       label: 'Ambulance Report',
-      desc: 'Emergency vitals, notes & audio report for paramedics',
+      desc: 'Live ePCR run-sheet & SBAR handover docket for paramedics',
       icon: FileText,
       badge: 'QR Handoff'
+    },
+    {
+      id: 'remedies',
+      label: 'Home Remedies & Substitutes',
+      desc: 'Verified home remedies & Jan Aushadhi generic substitutes for any condition',
+      icon: Leaf,
+      badge: 'New Feature'
     },
     {
       id: 'medicines',

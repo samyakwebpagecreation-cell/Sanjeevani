@@ -1,6 +1,6 @@
 // Types for RakshaSaathi v2
 
-export type Destination = 'home' | 'chat' | 'camera' | 'handoff' | 'practice' | 'library' | 'medicines' | 'mythbuster';
+export type Destination = 'home' | 'chat' | 'camera' | 'handoff' | 'practice' | 'library' | 'medicines' | 'mythbuster' | 'remedies';
 
 export type InjuryProtocolId = 
   | 'bleeding'

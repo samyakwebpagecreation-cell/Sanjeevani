@@ -25,6 +25,7 @@ import { SquadJoinView } from './components/crowd/SquadJoinView';
 import { CheapMedicinesView } from './components/medicines/CheapMedicinesView';
 import { AIMedicalCameraView } from './components/camera/AIMedicalCameraView';
 import { MythBusterView } from './components/mythbuster/MythBusterView';
+import { HomeRemediesView } from './components/remedies/HomeRemediesView';
 import { DocketMarkdownView } from './components/handoff/DocketMarkdownView';
 import { InAppQRScannerModal } from './components/camera/InAppQRScannerModal';
 
@@ -384,6 +385,20 @@ function AppContent() {
           />
         )}
 
+        {currentDestination === 'remedies' && (
+          <HomeRemediesView
+            onBackToHome={() => {
+              setCurrentDestination('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectDestination={(dest) => {
+              setCurrentDestination(dest);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onTriggerEscalation={handleTriggerEscalation}
+          />
+        )}
+
         {currentDestination === 'chat' && (
           <ChatView
             initialQuery={chatInitialQuery}
@@ -407,6 +422,10 @@ function AppContent() {
         <FloatingChatWidget
           onOpenFullChat={() => handleOpenChat()}
           onTriggerEscalation={handleTriggerEscalation}
+          onSelectDestination={(dest) => {
+            setCurrentDestination(dest);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       )}
 

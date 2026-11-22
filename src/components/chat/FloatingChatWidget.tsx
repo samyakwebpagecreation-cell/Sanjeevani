@@ -29,11 +29,13 @@ import { EmergencyRouteMap } from '../common/EmergencyRouteMap';
 interface FloatingChatWidgetProps {
   onOpenFullChat: () => void;
   onTriggerEscalation: (reason?: string) => void;
+  onSelectDestination?: (dest: any) => void;
 }
 
 export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   onOpenFullChat,
-  onTriggerEscalation
+  onTriggerEscalation,
+  onSelectDestination
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

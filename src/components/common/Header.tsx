@@ -133,6 +133,19 @@ export const Header: React.FC<HeaderProps> = ({
             MythBuster
           </button>
           <button
+            onClick={() => onSelectDestination('remedies')}
+            className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              currentDestination === 'remedies'
+                ? 'bg-primary text-white shadow-xs'
+                : 'text-slate-800 dark:text-slate-200 hover:text-primary hover:bg-white/80 dark:hover:bg-base/80'
+            }`}
+          >
+            <span className="flex items-center gap-1">
+              <span>Remedies & Rx</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </span>
+          </button>
+          <button
             onClick={() => onSelectDestination('medicines')}
             className={`px-2.5 xl:px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               currentDestination === 'medicines'

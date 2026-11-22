@@ -1019,6 +1019,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <ul className="space-y-2 text-slate-600 dark:text-slate-400 font-medium">
               <li><button onClick={() => onSelectDestination('chat')} className="hover:text-primary dark:hover:text-emerald-400 cursor-pointer">AI Guardian Triage</button></li>
               <li><button onClick={() => onSelectDestination('camera')} className="hover:text-primary dark:hover:text-emerald-400 cursor-pointer">AI Medical Camera</button></li>
+              <li><button onClick={() => onSelectDestination('remedies')} className="hover:text-primary dark:hover:text-emerald-400 cursor-pointer text-emerald-600 dark:text-emerald-400 font-bold">🌿 Home Remedies & Substitutes</button></li>
               <li><button onClick={() => onSelectDestination('mythbuster')} className="hover:text-primary dark:hover:text-emerald-400 cursor-pointer">MythBuster Engine</button></li>
               <li><button onClick={() => onSelectDestination('medicines')} className="hover:text-primary dark:hover:text-emerald-400 cursor-pointer">Cheap Medicines Finder</button></li>
             </ul>
