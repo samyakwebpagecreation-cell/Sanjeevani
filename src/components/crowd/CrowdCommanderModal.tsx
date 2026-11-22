@@ -253,7 +253,7 @@ export const CrowdCommanderModal: React.FC<CrowdCommanderModalProps> = ({
               <div className="space-y-0.5">
                 <strong className="block text-ink font-bold">Stop the crowd from freezing in place:</strong>
                 <span className="text-ink-muted leading-relaxed block">
-                  Upload or snap a quick photo and briefly describe the emergency. Sanjeevani AI will evaluate the scene and create simple life-saving tasks for bystanders who scan your QR code.
+                  Upload or snap a quick photo and briefly describe the emergency. RakshaSaathi AI will evaluate the scene and create simple life-saving tasks for bystanders who scan your QR code.
                 </span>
               </div>
             </div>

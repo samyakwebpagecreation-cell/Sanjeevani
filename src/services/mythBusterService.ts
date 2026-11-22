@@ -456,7 +456,7 @@ export async function verifyMedicalMythWithAI(
   // 2. Query Gemini Flash for on-the-fly clinical reality check
   try {
     const prompt = `
-You are the Sanjeevani Clinical Reality Engine and Medical MythBuster AI.
+You are the RakshaSaathi Clinical Reality Engine and Medical MythBuster AI.
 Evaluate this medical belief, home remedy, or first-aid practice: "${userQuery}"
 
 Against strict international clinical standards (AHA 2020, WHO, AIIMS New Delhi, ICMR).
@@ -550,7 +550,7 @@ export async function findMedicationTimingWithAI(
   // Dynamic AI fallback for any unlisted medication
   try {
     const prompt = `
-You are Sanjeevani AI Clinical Pharmacist. Provide verified clinical guidance for this medication: "${medicineQuery}".
+You are RakshaSaathi AI Clinical Pharmacist. Provide verified clinical guidance for this medication: "${medicineQuery}".
 
 Return ONLY a JSON object:
 {

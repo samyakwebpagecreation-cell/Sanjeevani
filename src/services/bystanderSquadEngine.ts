@@ -574,7 +574,7 @@ export async function generateBystanderSquadWithAI(params: GenerateSquadAIParams
   try {
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : undefined;
     const promptText = `
-You are Sanjeevani AI Emergency Incident Commander.
+You are RakshaSaathi AI Emergency Incident Commander.
 An emergency has occurred with onlookers / bystanders standing around.
 Incident Description: "${incidentDescription || 'Acute medical emergency scene'}"
 Location: "${addressPrompt}"

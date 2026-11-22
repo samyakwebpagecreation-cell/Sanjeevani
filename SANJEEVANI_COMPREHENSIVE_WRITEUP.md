@@ -1,10 +1,10 @@
-# Sanjeevani v2.0: The Complete Master Writeup & Technical Whitepaper
+# RakshaSaathi v2.0: The Complete Master Writeup & Technical Whitepaper
 
-> **Sanjeevani First-Aid Intelligence (v2.0)**  
+> **RakshaSaathi First-Aid Intelligence (v2.0)**  
 > *Transforming Every Smartphone into an Offline-Resilient Pre-Hospital Trauma Command Center.*  
 > **Live Web Application:** [https://sanjeevani-v2.web.app](https://sanjeevani-v2.web.app)  
 > **Repository Base:** `C:\Users\drsha\.gemini\antigravity\scratch\sanjeevani-v2`  
-> **Founders:** Dakshita Kapoor & Samyak Verma (Seth M.R. Jaipuria School)  
+> **Founders:** Yagyesh Pandey & Samyak Verma (Seth M.R. Jaipuria School)  
 > **Key Contributor:** Siddhi Misra  
 
 ---
@@ -12,12 +12,12 @@
 ## 1. Executive Summary & Genesis
 
 ### 1.1 The Genesis Story
-Sanjeevani was conceived at **Seth M.R. Jaipuria School (Lucknow, India)** following the school’s recognition among the **World’s Top 10 Schools by T4 Education** for Community Collaboration. Founders **Dakshita Kapoor** and **Samyak Verma**, alongside student researcher **Siddhi Misra**, realized that while civic responsibility was taught in classrooms, there was a fatal breakdown in real-world emergencies: **when accidents happen on Indian streets or in schools, 20 bystanders freeze in panic, film videos, or administer harmful home remedies while waiting 20 to 45 minutes for an ambulance.**
+RakshaSaathi was conceived at **Seth M.R. Jaipuria School (Lucknow, India)** following the school’s recognition among the **World’s Top 10 Schools by T4 Education** for Community Collaboration. Founders **Yagyesh Pandey** and **Samyak Verma**, alongside student researcher **Siddhi Misra**, realized that while civic responsibility was taught in classrooms, there was a fatal breakdown in real-world emergencies: **when accidents happen on Indian streets or in schools, 20 bystanders freeze in panic, film videos, or administer harmful home remedies while waiting 20 to 45 minutes for an ambulance.**
 
 ### 1.2 The Core Mission
 In India, more than **150,000 people die annually in road traffic accidents**, and over **58,000 die from snakebites**—many during the critical **"Golden Hour"** before reaching an Emergency Room. Furthermore, out-of-pocket expenditure on branded prescription drugs pushes millions of families into poverty each year.
 
-Sanjeevani v2.0 bridges this gap by turning every smartphone into a **decentralized, offline-resilient Trauma Command Center** that:
+RakshaSaathi v2.0 bridges this gap by turning every smartphone into a **decentralized, offline-resilient Trauma Command Center** that:
 1. Coordinates surrounding bystanders into a structured 3-person rescue team in under 10 seconds via **Crowd Squad QR**.
 2. Synthesizes hardware-timed **110 BPM CPR coaching** and **AR chest guidance** directly in the browser.
 3. Automatically generates an offline-scannable **SBAR Clinical Telemetry Docket** for incoming 108/112 paramedics.
@@ -188,7 +188,7 @@ graph TD
 - Combines hardware GPS with a draggable Leaflet rooftop pin, OpenStreetMap reverse geocoding, specific flat/house number inputs, and 1-tap Indian city capital hubs.
 
 ### 4.13 Live Community Reviews Ledger ([`CommunityReviewsSection.tsx`](file:///C:/Users/drsha/.gemini/antigravity/scratch/sanjeevani-v2/src/components/landing/CommunityReviewsSection.tsx))
-- Real-time Cloud Firestore customer review ledger. Displays 100% full unabridged reviews in a clean tabular format on desktop and vertical card rows on mobile—featuring testimonials from founders (**Dakshita Kapoor**, **Samyak Verma**), testers (**Siddhi Misra**), doctors, and students.
+- Real-time Cloud Firestore customer review ledger. Displays 100% full unabridged reviews in a clean tabular format on desktop and vertical card rows on mobile—featuring testimonials from founders (**Yagyesh Pandey**, **Samyak Verma**), testers (**Siddhi Misra**), doctors, and students.
 
 ---
 

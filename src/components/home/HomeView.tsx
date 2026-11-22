@@ -37,7 +37,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
             <div className="space-y-3">
               <h1 className="font-display-italic text-4xl sm:text-5xl lg:text-[54px] leading-[1.08] tracking-tight text-ink">
-                Sanjeevani
+                RakshaSaathi
               </h1>
               <p className="text-base sm:text-lg text-ink-muted leading-relaxed max-w-xl">
                 Immediate, calm first-aid guidance in emergencies. One micro-step at a time, backed by on-device visual positioning and deterministic safety checks.

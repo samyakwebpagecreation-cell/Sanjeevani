@@ -99,7 +99,7 @@ export interface VisionAnalysisResult {
 }
 
 const SANJEEVANI_SYSTEM_PROMPT = `
-You are Sanjeevani AI, India's accredited first-aid emergency decision-support system.
+You are RakshaSaathi AI, India's accredited first-aid emergency decision-support system.
 All protocols strictly adhere to the American Heart Association (AHA 2020), European Resuscitation Council (ERC 2021), and All India Institute of Medical Sciences (AIIMS) Emergency Medicine guidelines.
 Your audience includes responders, teachers, parents, students, and everyday citizens.
 
@@ -114,7 +114,7 @@ FORMAT & CLINICAL RULES:
    - **CRITICAL CONTRAINDICATIONS (WHAT NOT TO DO):** Dangerous myths or harmful mistakes to avoid (e.g. no raw ice, no tourniquet loosening, no oral fluids to unconscious patients).
    - **⚠️ Immediate 112 / Hospital Red Flags:**
      * Specific physiological red flags requiring rapid ambulance dispatch or emergency trauma center transfer.
-3. NEVER instruct users to "search Google Maps" or manually search for facilities. Sanjeevani's built-in Emergency Radar automatically locates the nearest hospital with 24/7 cold-chain ASV (anti-venom), pediatric burns, or AEDs and renders the live route directly.
+3. NEVER instruct users to "search Google Maps" or manually search for facilities. RakshaSaathi's built-in Emergency Radar automatically locates the nearest hospital with 24/7 cold-chain ASV (anti-venom), pediatric burns, or AEDs and renders the live route directly.
 `;
 
 /**
@@ -159,7 +159,7 @@ function generateOfflineProtocolResponse(query: string): string {
     .map((trig) => `* ${trig}`)
     .join('\n');
 
-  return `I am Sanjeevani AI Guardian (Offline Clinical Safe-Guard). Here is the verified emergency protocol for **${matchedProtocol.title}**:
+  return `I am RakshaSaathi AI Guardian (Offline Clinical Safe-Guard). Here is the verified emergency protocol for **${matchedProtocol.title}**:
 
 - **Immediate Priority:** ${matchedProtocol.shortDesc}
 
@@ -349,7 +349,7 @@ export async function analyzeInjuryVisual(
     cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '');
   }
 
-  const promptText = `You are Sanjeevani AI, India's premier accredited clinical first-aid vision assistant built on AHA 2020 and AIIMS emergency medicine guidelines.
+  const promptText = `You are RakshaSaathi AI, India's premier accredited clinical first-aid vision assistant built on AHA 2020 and AIIMS emergency medicine guidelines.
 Analyze this image or camera frame carefully and accurately for any medical emergency, injury, first-aid scenario, symptom, wound, or training simulation.
 
 COMPREHENSIVE CLINICAL RECOGNITION:
@@ -518,7 +518,7 @@ export async function generateScenarioQuiz(
 ): Promise<ScenarioQuiz> {
   const modelsToTry = FAIL_SAFE_MODELS.map((m) => m.id);
   
-  const prompt = `You are a medical first-aid educator for Sanjeevani AI.
+  const prompt = `You are a medical first-aid educator for RakshaSaathi AI.
 Generate ONE realistic emergency first-aid dilemma scenario for training everyday school students, parents, and citizens in simple, everyday language.
 Category requested: ${category === 'All' ? 'Any everyday emergency (e.g. Bleeding, Burns, CPR, Choking, Sprains, Heatstroke)' : category}
 Difficulty requested: ${difficulty}

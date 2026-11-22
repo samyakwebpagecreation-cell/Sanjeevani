@@ -311,7 +311,7 @@ export const ScreenshotFab: React.FC = () => {
 
     const link = document.createElement('a');
     link.href = capturedImage.dataUrl;
-    link.download = `sanjeevani-${capturedImage.mode}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
+    link.download = `rakshasaathi-${capturedImage.mode}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -329,14 +329,14 @@ export const ScreenshotFab: React.FC = () => {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Sanjeevani Screenshot (${capturedImage.width}x${capturedImage.height})</title>
+            <title>RakshaSaathi Screenshot (${capturedImage.width}x${capturedImage.height})</title>
             <style>
               body { margin: 0; background: #0F1614; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
               img { max-width: 100%; height: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
             </style>
           </head>
           <body>
-            <img src="${capturedImage.dataUrl}" alt="Sanjeevani Screenshot" />
+            <img src="${capturedImage.dataUrl}" alt="RakshaSaathi Screenshot" />
           </body>
         </html>
       `);

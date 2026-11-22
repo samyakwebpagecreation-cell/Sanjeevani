@@ -178,7 +178,7 @@ export async function analyzeVideoIncident(
   }
 
   const promptInstructions = `
-You are Sanjeevani AI Forensic Trauma Analyst, India's premier medical-grade emergency incident intelligence engine.
+You are RakshaSaathi AI Forensic Trauma Analyst, India's premier medical-grade emergency incident intelligence engine.
 You are analyzing sequential, timestamped video frames extracted from an emergency scene or injury incident.
 ${contextHint ? `Context Hint from User/Scene: "${contextHint}"` : ''}
 Video Total Duration: ~${durationSeconds.toFixed(1)} seconds.
@@ -430,7 +430,7 @@ export async function generateSampleIncidentVideo(
       // Header Banner
       ctx.fillStyle = '#F0A85B';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText(`SANJEEVANI REAL-TIME VIDEO TELEMETRY • [T+00:0${currentSec}s]`, 20, 35);
+      ctx.fillText(`RAKSHASAATHI REAL-TIME VIDEO TELEMETRY • [T+00:0${currentSec}s]`, 20, 35);
 
       ctx.fillStyle = '#FFFFFF';
       ctx.font = '14px sans-serif';

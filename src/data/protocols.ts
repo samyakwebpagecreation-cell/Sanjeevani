@@ -260,7 +260,7 @@ export const FIRST_AID_PROTOCOLS: Record<string, FirstAidProtocol> = {
         detail: 'Identify the primary symptom: Nosebleed, Bee sting, Sprain, Heat exhaustion, or Eye irritation.',
         actionPrompt: 'Select confirmed symptom',
         cameraRequired: false,
-        audioPrompt: 'Tell Sanjeevani what happened, or tap one of the common situations below.'
+        audioPrompt: 'Tell RakshaSaathi what happened, or tap one of the common situations below.'
       }
     ]
   }

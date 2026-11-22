@@ -1,17 +1,17 @@
-# Sanjeevani v2.0 — First-Aid Intelligence & Trauma Command Center
+# RakshaSaathi v2.0 — First-Aid Intelligence & Trauma Command Center
 
 > **Transforming Every Smartphone into an Offline-Resilient Pre-Hospital Trauma Command Center.**  
 > 🌐 **Live Web Application:** [https://sanjeevani-v2.web.app](https://sanjeevani-v2.web.app)  
 > 🏫 **Origin:** Seth M.R. Jaipuria School (Recognized among the World's Top 10 Schools by T4 Education)  
-> 👥 **Founders:** Dakshita Kapoor & Samyak Verma | **Key Contributor:** Siddhi Misra
+> 👥 **Founders:** Yagyesh Pandey & Samyak Verma | **Key Contributor:** Siddhi Misra
 
 ---
 
-## 🚑 About Sanjeevani
+## 🚑 About RakshaSaathi
 
 In India, more than **150,000 people die annually in road traffic accidents**, and over **58,000 die from snakebites**—many during the critical **"Golden Hour"** before an ambulance arrives. 
 
-**Sanjeevani v2.0** bridges this pre-hospital void by providing real-time clinical execution tools rather than just conversational chat:
+**RakshaSaathi v2.0** bridges this pre-hospital void by providing real-time clinical execution tools rather than just conversational chat:
 1. **112 SOS Deterministic Hard-Stop Override:** Locks conversational guidance during severe life-threatening emergencies, triggers immediate 112 calling, and generates a live GPS driving route to the nearest Level-1 trauma hospital.
 2. **Crowd Squad QR:** Flashes a full-screen dynamic QR code at the accident scene; surrounding bystanders scan it with their phone camera (**zero app install, zero login**) and get instantly assigned to 3 coordinated, non-overlapping roles:
    - *Role 1:* 112 Dispatch & GPS Doorstep Beacon
@@ -88,5 +88,5 @@ In India, more than **150,000 people die annually in road traffic accidents**, a
 
 ## 📄 License & Team
 
-Developed by **Team Sanjeevani**  
+Developed by **Team RakshaSaathi**  
 *Save Time · Save Life*

@@ -142,6 +142,7 @@ export function extractCallingData(text: string): string[] {
 }
 
 export type SanjeevaniQRType = 'squad' | 'docket' | 'url' | 'tel' | 'text';
+export type RakshaSaathiQRType = SanjeevaniQRType;
 
 export interface ParsedSanjeevaniQR {
   type: SanjeevaniQRType;
@@ -155,6 +156,7 @@ export interface ParsedSanjeevaniQR {
   markdown: string;
   rawPayload: string;
 }
+export type ParsedRakshaSaathiQR = ParsedSanjeevaniQR;
 
 /**
  * Analyzes and structures any scanned QR payload
@@ -179,7 +181,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
       }
     } catch {}
 
-    const md = `# 🚨 SANJEEVANI BYSTANDER RESCUE SQUAD
+    const md = `# 🚨 RAKSHASAATHI BYSTANDER RESCUE SQUAD
 **Squad Session ID:** \`${squadId}\`  
 **Incident Type:** ${category.replace('_', ' ').toUpperCase()}  
 **Location:** ${location}  
@@ -194,7 +196,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
 4. **Ambulance Gate Flagger** - Direct incoming emergency vehicles at intersection.
 5. **Crowd Airflow Marshal** - Maintain 15-foot safety circle for patient oxygen.
 
-> ⚡ **Action Required:** Open Sanjeevani to claim your life-saving task immediately.
+> ⚡ **Action Required:** Open RakshaSaathi to claim your life-saving task immediately.
 `;
 
     return {
@@ -211,7 +213,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
 
   // 2. Check if it's a Paramedic Handover Docket (URL, ID, or JSON)
   const isDocketUrl = text.includes('docket=') || text.includes('handoff=') || text.startsWith('TRAUMA-');
-  const isDocketJson = text.includes('SANJEEVANI-v2-BLACK-BOX') || text.includes('TRAUMA-') || (text.startsWith('{') && text.includes('interventions'));
+  const isDocketJson = text.includes('RAKSHASAATHI-v2-BLACK-BOX') || text.includes('SANJEEVANI-v2-BLACK-BOX') || text.includes('TRAUMA-') || (text.startsWith('{') && text.includes('interventions'));
 
   if (isDocketUrl || isDocketJson) {
     let docketId = 'TRAUMA-' + Math.floor(100000 + Math.random() * 900000);
@@ -243,7 +245,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
     }
 
     const md = `# 📋 PARAMEDIC HANDOVER DOCKET - #${docketId}
-**System:** Sanjeevani v2 Black-Box Trauma Intelligence  
+**System:** RakshaSaathi v2 Black-Box Trauma Intelligence  
 **Triage Priority:** Critical P1 (Pre-Hospital Handover)  
 **Chief Protocol:** ${title}
 
@@ -298,7 +300,7 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
       summary: text.slice(0, 80),
       url: text,
       callingNumbers,
-      markdown: `# 🌐 Scanned Web Link\n**URL:** [${text}](${text})\n\nScanned via Sanjeevani QR Scanner.`,
+      markdown: `# 🌐 Scanned Web Link\n**URL:** [${text}](${text})\n\nScanned via RakshaSaathi QR Scanner.`,
       rawPayload: text
     };
   }
@@ -309,7 +311,9 @@ export function parseSanjeevaniPayload(rawText: string): ParsedSanjeevaniQR {
     title: 'Scanned Medical Text',
     summary: text.length > 80 ? `${text.slice(0, 77)}...` : text,
     callingNumbers,
-    markdown: `# 📝 Scanned Data\n\n\`\`\`\n${text}\n\`\`\`\n\n*Saved to Sanjeevani offline history.*`,
+    markdown: `# 📝 Scanned Data\n\n\`\`\`\n${text}\n\`\`\`\n\n*Saved to RakshaSaathi offline history.*`,
     rawPayload: text
   };
 }
+
+export const parseRakshaSaathiPayload = parseSanjeevaniPayload;

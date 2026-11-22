@@ -225,7 +225,7 @@ export const SquadJoinView: React.FC<SquadJoinViewProps> = ({ squadId, onExit })
     if (!session) return '';
     const rolesList = Object.values(session.roles || {}) as SquadTaskRole[];
 
-    return `# 🚨 SANJEEVANI v2 - EMERGENCY BYSTANDER SQUAD DOCKET
+    return `# 🚨 RAKSHASAATHI v2 - EMERGENCY BYSTANDER SQUAD DOCKET
 **Docket ID:** \`#${session.id}\`  
 **Protocol:** ${session.protocolTitle}  
 **Urgency Level:** ${session.urgencyLevel}  
@@ -260,7 +260,7 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
 
   const handleDownloadMarkdown = () => {
     const md = generateMarkdownDocket();
-    downloadMarkdownFile(`Sanjeevani_Squad_${squadId}_Docket.md`, md);
+    downloadMarkdownFile(`RakshaSaathi_Squad_${squadId}_Docket.md`, md);
   };
 
   if (!session) {
@@ -296,7 +296,7 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#F0A85B]">
-                  SANJEEVANI RESCUE SQUAD
+                  RAKSHASAATHI RESCUE SQUAD
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-400/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1" />
@@ -766,7 +766,7 @@ ${r.scriptText ? `- **Teleprompter Script:** *"${r.scriptText}"*\n` : ''}`).join
         </div>
 
         <div className="text-center text-[11px] font-bold text-slate-500 pt-1">
-          Sanjeevani v2.0 Bystander Paradox Resolution Engine • 100% Zero-Install Mobile Web
+          RakshaSaathi v2.0 Bystander Paradox Resolution Engine • 100% Zero-Install Mobile Web
         </div>
 
       </main>

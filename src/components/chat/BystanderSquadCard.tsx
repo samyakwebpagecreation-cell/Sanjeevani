@@ -79,7 +79,7 @@ export const BystanderSquadCard: React.FC<BystanderSquadCardProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Sanjeevani-Squad-${session.id}.svg`;
+    a.download = `RakshaSaathi-Squad-${session.id}.svg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

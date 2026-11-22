@@ -77,7 +77,7 @@ export const ParamedicHandoutCard: React.FC<ParamedicHandoutCardProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Sanjeevani-${handout.handoutId}.svg`;
+    a.download = `RakshaSaathi-${handout.handoutId}.svg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

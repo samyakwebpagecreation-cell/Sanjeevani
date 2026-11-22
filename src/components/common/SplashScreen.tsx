@@ -96,7 +96,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center animate-calm-breathe">
             <img 
               src="/sanjeevani-logo.png" 
-              alt="Sanjeevani Logo" 
+              alt="RakshaSaathi Logo" 
               className="w-full h-full object-contain select-none filter drop-shadow-[0_8px_20px_rgba(14,90,80,0.12)]" 
             />
           </div>
@@ -105,7 +105,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         {/* Calm, Typographic Wordmark & Subtitle */}
         <div className="space-y-2 animate-soft-fade-up">
           <h1 className="font-display-italic text-3xl sm:text-4xl text-[#0E5A50] font-normal tracking-tight">
-            Sanjeevani
+            RakshaSaathi
           </h1>
           <p className="text-[11px] sm:text-xs text-slate-400 tracking-[0.24em] uppercase font-semibold">
             Emergency Decision Support

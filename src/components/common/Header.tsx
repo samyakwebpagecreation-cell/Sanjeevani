@@ -45,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     fetchLocation();
 
+    window.addEventListener('rakshasaathi_location_updated', fetchLocation);
+    window.addEventListener('rakshasaathi_location_cleared', fetchLocation);
     window.addEventListener('sanjeevani_location_updated', fetchLocation);
     window.addEventListener('sanjeevani_location_cleared', fetchLocation);
 
@@ -54,6 +56,8 @@ export const Header: React.FC<HeaderProps> = ({
 
     return () => {
       unsub();
+      window.removeEventListener('rakshasaathi_location_updated', fetchLocation);
+      window.removeEventListener('rakshasaathi_location_cleared', fetchLocation);
       window.removeEventListener('sanjeevani_location_updated', fetchLocation);
       window.removeEventListener('sanjeevani_location_cleared', fetchLocation);
     };
@@ -68,16 +72,16 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => onSelectDestination('home')}
             className="group flex items-center space-x-2 sm:space-x-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full transition-transform min-w-0 cursor-pointer"
-            aria-label="Sanjeevani Home"
+            aria-label="RakshaSaathi Home"
           >
             {/* Official Logo Emblem */}
             <div className="relative flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white/95 dark:bg-surface/90 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden transition-all group-hover:scale-105 p-1 shrink-0 backdrop-blur-md">
-              <img src="/sanjeevani-logo.png" alt="Sanjeevani Logo" className="h-full w-full object-contain" />
+              <img src="/sanjeevani-logo.png" alt="RakshaSaathi Logo" className="h-full w-full object-contain" />
             </div>
 
             <div className="flex flex-col min-w-0">
               <span className="font-display-italic text-base sm:text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none truncate">
-                Sanjeevani
+                RakshaSaathi
               </span>
               <span className="text-[7.5px] sm:text-[9px] font-black tracking-wider text-amber-800 dark:text-accent uppercase mt-0.5 truncate">
                 First-Aid Intelligence
@@ -157,8 +161,8 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => onOpenQRScanner ? onOpenQRScanner() : onSelectDestination('camera')}
             className="flex h-8 w-8 sm:h-9 sm:w-auto items-center justify-center sm:space-x-1.5 sm:px-3 rounded-full bg-emerald-500/12 hover:bg-emerald-500/20 border border-emerald-600/30 text-xs font-extrabold text-emerald-800 dark:text-emerald-300 transition-colors cursor-pointer shrink-0"
-            title="Scan Sanjeevani QR Code"
-            aria-label="Scan Sanjeevani QR Code"
+            title="Scan RakshaSaathi QR Code"
+            aria-label="Scan RakshaSaathi QR Code"
           >
             <QrCode className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline lg:hidden xl:inline whitespace-nowrap">Scan QR</span>

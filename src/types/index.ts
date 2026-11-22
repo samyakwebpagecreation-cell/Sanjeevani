@@ -1,4 +1,4 @@
-// Types for Sanjeevani v2
+// Types for RakshaSaathi v2
 
 export type Destination = 'home' | 'chat' | 'camera' | 'handoff' | 'practice' | 'library' | 'medicines' | 'mythbuster';
 

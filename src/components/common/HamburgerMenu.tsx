@@ -78,7 +78,7 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
     {
       id: 'home',
       label: user ? 'Dashboard' : 'Home',
-      desc: user ? 'Your progress, daily quests & guardian profile' : 'Overview & story of Sanjeevani',
+      desc: user ? 'Your progress, daily quests & guardian profile' : 'Overview & story of RakshaSaathi',
       icon: user ? LayoutDashboard : Home
     },
     {
@@ -156,7 +156,7 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
                 </div>
                 <div>
                   <span className="font-display-italic text-lg font-bold text-ink">
-                    Sanjeevani
+                    RakshaSaathi
                   </span>
                   <p className="text-[11px] text-ink-muted leading-tight">Navigation & Controls</p>
                 </div>
@@ -380,7 +380,7 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
             </div>
 
             <div className="mt-4 flex items-center justify-between text-[11px] text-ink-muted">
-              <span>Sanjeevani v2.0.0</span>
+              <span>RakshaSaathi v2.0.0</span>
               <span>Calm Authority</span>
             </div>
           </div>

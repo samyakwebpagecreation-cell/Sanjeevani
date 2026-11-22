@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUserProfile(JSON.parse(saved));
           } else {
             setUserProfile({
-              fullName: currentUser.displayName || 'Sanjeevani Responder',
+              fullName: currentUser.displayName || 'RakshaSaathi Responder',
               role: 'student'
             });
           }

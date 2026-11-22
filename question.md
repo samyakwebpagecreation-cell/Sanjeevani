@@ -262,7 +262,7 @@ ASHA workers and rural volunteers often serve as the first point of medical cont
 
 ### A12. What inspired the creation of Sanjeevani and its community-first design?
 **Answer:**
-As students at **Seth M.R. Jaipuria School**—which was recognized among the **World’s Top 10 Schools by T4 Education** for community collaboration—our founders (**Dakshita Kapoor** and **Samyak Verma**) wanted to translate the spirit of collective civic responsibility into practical lifesaving technology: ensuring that in an emergency, every citizen becomes a capable contributor rather than a helpless spectator, and that essential medicines remain affordable for every family.
+As students at **Seth M.R. Jaipuria School**—which was recognized among the **World’s Top 10 Schools by T4 Education** for community collaboration—our founders (**Yagyesh Pandey** and **Samyak Verma**) wanted to translate the spirit of collective civic responsibility into practical lifesaving technology: ensuring that in an emergency, every citizen becomes a capable contributor rather than a helpless spectator, and that essential medicines remain affordable for every family.
 
 ### A13. How does Sanjeevani work in noisy environments like traffic intersections or school playgrounds?
 **Answer:**

@@ -7,7 +7,9 @@ import {
   Plus, 
   Loader2,
   CheckCircle2,
-  MessageSquareHeart
+  MessageSquareHeart,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { 
   saveCustomerReviewToFirestore, 
@@ -51,20 +53,20 @@ const CATEGORY_TAGS = [
   'General Experience'
 ];
 
-// Order requested: 1. Dakshita -> 2. Samyak -> 3. Siddhi
+// Highlighted Founder Reviews: 1. Yagyesh Pandey -> 2. Samyak Verma
 export const TOP_FEATURED_REVIEWS: UserReview[] = [
   {
-    id: 'top-review-dakshita',
-    authorName: 'Dakshita Kapoor',
+    id: 'top-review-yagyesh',
+    authorName: 'Yagyesh Pandey',
     role: 'Founder',
-    authorTooltip: 'Dakshita Kapoor — Founder of Sanjeevani · Seth M.R. Jaipuria School',
+    authorTooltip: 'Yagyesh Pandey — Founder of RakshaSaathi · Seth M.R. Jaipuria School',
     rating: 5,
     categoryTag: 'Crowd Squad QR',
     badge: 'Verified',
     shortStory:
       "The idea for Crowd Squad QR came when our school was recognised among the world's top 10 by T4 Education. Every bystander can become a contributor, not a spectator.",
     story:
-      "My favourite feature of Sanjeevani is the Crowd Squad QR. The idea of Crowd Squad QR came to me when our school was recognised among the world's top 10 schools by T4 Education for community collaboration. This recognition inspired me to translate the value of collective responsibility into a practical solution. Through Sanjeevani, I wanted to demonstrate that in an emergency, every bystander can become a contributor rather than a mere spectator. I believe this feature embodies our school's values and reinforces the idea that when individuals come together with a shared purpose, their collective efforts can make a meaningful difference.",
+      "My favourite feature of RakshaSaathi is the Crowd Squad QR. The idea of Crowd Squad QR came to me when our school was recognised among the world's top 10 schools by T4 Education for community collaboration. This recognition inspired me to translate the value of collective responsibility into a practical solution. Through RakshaSaathi, I wanted to demonstrate that in an emergency, every bystander can become a contributor rather than a mere spectator. I believe this feature embodies our school's values and reinforces the idea that when individuals come together with a shared purpose, their collective efforts can make a meaningful difference.",
     date: 'Oct 2026',
     isUserSubmitted: true
   },
@@ -72,19 +74,23 @@ export const TOP_FEATURED_REVIEWS: UserReview[] = [
     id: 'top-review-samyak',
     authorName: 'Samyak Verma',
     role: 'Founder',
-    authorTooltip: 'Samyak Verma — Founder of Sanjeevani · Seth M.R. Jaipuria School',
+    authorTooltip: 'Samyak Verma — Founder of RakshaSaathi · Seth M.R. Jaipuria School',
     rating: 5,
     categoryTag: 'Jan Aushadhi Savings',
     badge: 'Verified',
     shortStory:
-      "Sanjeevani's medicine price comparison system helps families compare prices across pharmacies and find verified Jan Aushadhi Kendra generics—making essential healthcare genuinely affordable for everyone.",
+      "RakshaSaathi's medicine price comparison system helps families compare prices across pharmacies and find verified Jan Aushadhi Kendra generics—making essential healthcare genuinely affordable for everyone.",
     story:
-      'One of the most impressive features of Sanjeevani is its medicine price comparison system, which helps users compare prices across multiple websites and find affordable options at Jan Aushadhi Kendras. As a student, I believe this feature reflects genuine social responsibility by making essential medicines more accessible and promoting affordable healthcare for everyone.',
+      'One of the most impressive features of RakshaSaathi is its medicine price comparison system, which helps users compare prices across multiple websites and find affordable options at Jan Aushadhi Kendras. As a student, I believe this feature reflects genuine social responsibility by making essential medicines more accessible and promoting affordable healthcare for everyone.',
     date: 'Oct 2026',
     isUserSubmitted: true
-  },
+  }
+];
+
+// General Community Reviews (Siddhi Misra + Reviews 04 through 14)
+export const GENERAL_COMMUNITY_REVIEWS: UserReview[] = [
   {
-    id: 'top-review-siddhi',
+    id: 'review-siddhi',
     authorName: 'Siddhi Misra',
     role: 'Student',
     authorTooltip: 'Siddhi Misra — Student & Bystander Tester',
@@ -92,12 +98,147 @@ export const TOP_FEATURED_REVIEWS: UserReview[] = [
     categoryTag: 'General Experience',
     badge: 'Verified',
     shortStory:
-      'Sanjeevani combines practical technology and social responsibility to address real-life emergencies. What stands out most is how it makes step-by-step first-aid guidance accessible and healthcare more affordable.',
+      'RakshaSaathi combines practical technology and social responsibility to address real-life emergencies. What stands out most is how it makes step-by-step first-aid guidance accessible and healthcare more affordable.',
     story:
-      "My experience with Sanjeevani has been truly impressive. I appreciate how the app combines technology and social responsibility to address real-life emergencies. Its features are practical, innovative, and designed with people's needs in mind. What stands out most is its focus on making first-aid guidance accessible and healthcare more affordable. I believe Sanjeevani is a commendable initiative that demonstrates how technology can create a positive impact on society.",
+      "My experience with RakshaSaathi has been truly impressive. I appreciate how the app combines technology and social responsibility to address real-life emergencies. Its features are practical, innovative, and designed with people's needs in mind. What stands out most is its focus on making first-aid guidance accessible and healthcare more affordable. I believe RakshaSaathi is a commendable initiative that demonstrates how technology can create a positive impact on society.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-altamas',
+    authorName: 'Dr. Altamas',
+    role: 'Doctor',
+    authorTooltip: 'Dr. Altamas — Doctor',
+    rating: 5,
+    categoryTag: 'CPR Saved a Life',
+    badge: 'Verified',
+    story:
+      "RakshaSaathi is an excellent AI-powered healthcare app that makes healthcare more accessible, smarter, and convenient. Its user-friendly interface and AI-driven health assistance provide valuable support for understanding health concerns and making informed decisions. A great initiative towards the future of digital healthcare. Highly recommended!",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-vijay',
+    authorName: 'Vijay Rastogi',
+    role: 'Teacher',
+    authorTooltip: 'Vijay Rastogi — Teacher',
+    rating: 5,
+    categoryTag: 'General Experience',
+    badge: 'Verified',
+    story:
+      "As a teacher, I believe that true education is not just about gaining knowledge, but about using that knowledge to make a meaningful difference in people's lives. RakshaSaathi is a valuable initiative that brings medical technology and health information closer to people, with the potential to create a real and lasting impact on society.\n\nWhat makes this website truly meaningful is its purpose: if the medical technology and information shared through RakshaSaathi can help even one person in a real-life situation, provide timely guidance, raise awareness, or make someone feel more informed and confident during a difficult moment, then its existence has already served a noble purpose.\n\nIn my view, there is no greater achievement than using one's knowledge, skills, and innovation to help another human being. RakshaSaathi represents this spirit of service and compassion. If this initiative can make a difference in even one life, that itself would be an achievement greater than many other accomplishments. I sincerely appreciate the thought behind this initiative and hope it continues to grow, reach more people, and contribute positively to society.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-sarthak',
+    authorName: 'Sarthak Misra',
+    role: 'Student',
+    authorTooltip: 'Sarthak Misra — Student & Former Head Boy',
+    rating: 5,
+    categoryTag: 'General Experience',
+    badge: 'Verified',
+    story:
+      "As a former Head Boy, I truly appreciate the vision behind RakshaSaathi and its commitment to social responsibility. Its AI-powered emergency assistance reflects how technology can be used to address real-world challenges and support people during critical situations. What impresses me most is its emphasis on timely guidance, collective responsibility, and accessibility. RakshaSaathi is a commendable initiative that demonstrates leadership through innovation and a genuine desire to make a difference in society. Hats off to the entire team for turning an almost inconceivable idea into such a remarkable reality!",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-atharva',
+    authorName: 'Atharva Khandelwal',
+    role: 'Student',
+    authorTooltip: 'Atharva Khandelwal — Student',
+    rating: 5,
+    categoryTag: 'General Experience',
+    badge: 'Verified',
+    story:
+      "RakshaSaathi’s AI-powered virtual doctor is one of its most remarkable features. It provides immediate, situation-specific first-aid guidance when a doctor is not readily available, helping users understand what they should and should not do while waiting for professional medical assistance. I believe this feature is particularly valuable during critical emergencies, as it promotes informed action, reduces confusion, and makes essential emergency guidance more accessible. It is an impressive example of how AI can be used responsibly to support healthcare and potentially save lives.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-kirti',
+    authorName: 'Kirti Mishra',
+    role: 'Teacher',
+    authorTooltip: 'Kirti Mishra — Teacher',
+    rating: 5,
+    categoryTag: 'Paramedic SBAR QR',
+    badge: 'Verified',
+    story:
+      "As a teacher, I find RakshaSaathi to be an innovative and socially impactful initiative. Its AI-powered first-aid assistance can guide people during emergencies, while the Crowd Squad QR feature assigns specific roles to bystanders, encouraging coordinated action instead of confusion. I appreciate the team's creativity and effort in using technology to potentially save lives. With proper medical validation, RakshaSaathi has the potential to make emergency assistance more accessible and effective.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-payal',
+    authorName: 'Payal Saxena',
+    role: 'Doctor',
+    authorTooltip: 'Payal Saxena — Doctor',
+    rating: 5,
+    categoryTag: 'Offline Emergency',
+    badge: 'Verified',
+    story:
+      "RakshaSaathi’s most impressive feature is its offline emergency support, which makes essential first-aid guidance accessible even without an internet connection. From a doctor's perspective, this is particularly valuable in remote villages, rural communities, and areas with poor network coverage, where immediate access to medical information can be limited. By providing guidance when connectivity is unavailable, RakshaSaathi has the potential to help people respond more confidently to emergencies while arranging professional medical assistance. It represents a meaningful step towards making emergency healthcare guidance accessible to everyone, everywhere.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-shashwat',
+    authorName: 'Shashwat Verma',
+    role: 'Doctor',
+    authorTooltip: 'Shashwat Verma — Doctor',
+    rating: 5,
+    categoryTag: 'General Experience',
+    badge: 'Verified',
+    story:
+      "RakshaSaathi is a promising initiative that makes essential first-aid guidance more accessible. Its best feature is step-by-step first-aid guidance, which can help users understand what to do during emergencies without feeling overwhelmed. By presenting medical instructions in a simple, structured manner, it has the potential to reduce confusion and encourage timely action while professional medical help is being arranged.\n\nOverall, RakshaSaathi demonstrates how technology can support emergency preparedness and make healthcare guidance more accessible to everyone.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-sumi',
+    authorName: 'Dr. Sumi Chandra',
+    role: 'Doctor',
+    authorTooltip: 'Dr. Sumi Chandra — Doctor',
+    rating: 5,
+    categoryTag: 'Crowd Squad QR',
+    badge: 'Verified',
+    story:
+      "It is a very efficient feature which turns the unwanted attention faced by the victims of the public accidents into an opportunity which provides help for the victims.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-jitendra',
+    authorName: 'Jitendra Singh',
+    role: 'Doctor',
+    authorTooltip: 'Jitendra Singh — Doctor',
+    rating: 5,
+    categoryTag: 'Jan Aushadhi Savings',
+    badge: 'Verified',
+    story:
+      "Found cheaper medicines.\nCongratulations for making such a nice website.",
+    date: 'Oct 2026',
+    isUserSubmitted: true
+  },
+  {
+    id: 'review-chetan',
+    authorName: 'Chetan Chandra',
+    role: 'Doctor',
+    authorTooltip: 'Chetan Chandra — Doctor',
+    rating: 5,
+    categoryTag: 'CPR Saved a Life',
+    badge: 'Verified',
+    story:
+      "I would call this app as the ‘One-Stop Solution’. This brilliantly combines and organises facilities in one app for the user comfortablilty and gives clear and direct steps to provide proper first-aid. The feature which I find truly innovative and different from other apps is the Generated QR Code which takes the problem of unwanted attention and creates it into an opportunity to receive help and attention in time. This further supports the goal of Saving Lives in 300 seconds. I highly recommend and support this app for anyone who could be in need.",
     date: 'Oct 2026',
     isUserSubmitted: true
   }
+];
+
+export const INITIAL_ALL_REVIEWS: UserReview[] = [
+  ...TOP_FEATURED_REVIEWS,
+  ...GENERAL_COMMUNITY_REVIEWS
 ];
 
 /**
@@ -110,11 +251,11 @@ function formatAuthorDisplay(authorName: string, role: string): {
   isDistinct: boolean;
 } {
   const lowerName = authorName.toLowerCase();
-  if (lowerName.includes('dakshita')) {
+  if (lowerName.includes('yagyesh')) {
     return {
-      cleanName: 'Dakshita Kapoor',
+      cleanName: 'Yagyesh Pandey',
       shortRole: 'Founder',
-      fullTooltip: 'Dakshita Kapoor — Founder of Sanjeevani · Seth M.R. Jaipuria School',
+      fullTooltip: 'Yagyesh Pandey — Founder of RakshaSaathi · Seth M.R. Jaipuria School',
       isDistinct: true
     };
   }
@@ -122,7 +263,7 @@ function formatAuthorDisplay(authorName: string, role: string): {
     return {
       cleanName: 'Samyak Verma',
       shortRole: 'Founder',
-      fullTooltip: 'Samyak Verma — Founder of Sanjeevani · Seth M.R. Jaipuria School',
+      fullTooltip: 'Samyak Verma — Founder of RakshaSaathi · Seth M.R. Jaipuria School',
       isDistinct: true
     };
   }
@@ -130,8 +271,8 @@ function formatAuthorDisplay(authorName: string, role: string): {
     return {
       cleanName: 'Siddhi Misra',
       shortRole: 'Student',
-      fullTooltip: 'Siddhi Misra — Student',
-      isDistinct: true
+      fullTooltip: 'Siddhi Misra — Student & Bystander Tester',
+      isDistinct: false
     };
   }
   const parenIndex = authorName.indexOf('(');
@@ -154,12 +295,27 @@ export const CommunityReviewsSection: React.FC = () => {
   const user = authContext?.user || null;
   const userProfile = authContext?.userProfile || null;
 
-  // Real reviews initialized with top 3 in order: Yagyesh -> Samyak -> Siddhi
-  const [reviews, setReviews] = useState<UserReview[]>(TOP_FEATURED_REVIEWS);
+  const [reviews, setReviews] = useState<UserReview[]>(() => {
+    try {
+      const cached = localStorage.getItem('rakshasaathi_user_reviews') || localStorage.getItem('sanjeevani_user_reviews');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length >= INITIAL_ALL_REVIEWS.length) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return INITIAL_ALL_REVIEWS;
+  });
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedNotification, setSubmittedNotification] = useState(false);
+
+  // Pagination & expansion states
+  const [showAll, setShowAll] = useState(false);
+  const [expandedStoryIds, setExpandedStoryIds] = useState<Set<string>>(new Set());
 
   // Form State
   const [authorName, setAuthorName] = useState('');
@@ -180,10 +336,8 @@ export const CommunityReviewsSection: React.FC = () => {
 
   // Listen to live Firestore customer_reviews in real time
   useEffect(() => {
-    // Real-time live Firestore synchronization
     const unsubscribe = subscribeToCustomerReviews((liveFirestoreReviews) => {
       if (liveFirestoreReviews) {
-        // Map Firestore documents to UserReview format
         const mappedLive: UserReview[] = liveFirestoreReviews.map(fr => ({
           id: fr.id,
           authorName: fr.authorName,
@@ -196,24 +350,25 @@ export const CommunityReviewsSection: React.FC = () => {
           isUserSubmitted: true
         }));
 
-        // Filter out duplicates of the top 3 featured reviews (Dakshita, Samyak, Siddhi)
-        // so that Dakshita is always 1st, Samyak 2nd, and Siddhi 3rd
+        // Filter out duplicate reviews of the founders so top featured order is kept intact
         const additionalReviews = mappedLive.filter(r => {
           const lower = r.authorName.toLowerCase();
           return (
-            !lower.includes('dakshita') &&
-            !lower.includes('samyak') &&
-            !lower.includes('siddhi')
+            !lower.includes('yagyesh') &&
+            !lower.includes('samyak')
           );
         });
 
-        const orderedReviews = [...TOP_FEATURED_REVIEWS, ...additionalReviews];
+        // Merge initial curated set with any new live submissions
+        const existingIds = new Set(INITIAL_ALL_REVIEWS.map(r => r.id));
+        const customSubmissions = additionalReviews.filter(r => !existingIds.has(r.id));
+        const orderedReviews = [...INITIAL_ALL_REVIEWS, ...customSubmissions];
+
         setReviews(orderedReviews);
         setIsLoading(false);
 
-        // Keep local cache updated for offline emergency resilience
         try {
-          localStorage.setItem('sanjeevani_user_reviews', JSON.stringify(orderedReviews));
+          localStorage.setItem('rakshasaathi_user_reviews', JSON.stringify(orderedReviews));
         } catch (e) {
           console.warn('Could not cache reviews to localStorage', e);
         }
@@ -223,13 +378,24 @@ export const CommunityReviewsSection: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  const toggleStoryExpansion = (id: string) => {
+    setExpandedStoryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authorName.trim() || !story.trim()) return;
 
     setIsSubmitting(true);
     const newId = `rev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    
     const badgeText = 'Verified';
 
     const newReviewData: FirestoreCustomerReview = {
@@ -248,7 +414,6 @@ export const CommunityReviewsSection: React.FC = () => {
       verified: true
     };
 
-    // Optimistically update local view immediately
     const optimisticReview: UserReview = {
       id: newId,
       authorName: authorName.trim(),
@@ -260,19 +425,22 @@ export const CommunityReviewsSection: React.FC = () => {
       date: 'Oct 2026',
       isUserSubmitted: true
     };
-    setReviews(prev => [...TOP_FEATURED_REVIEWS, optimisticReview, ...prev.filter(r => !r.id.startsWith('top-review-') && r.id !== newId)]);
 
-    // Write directly to Cloud Firestore in project sanjeevani-v2
+    setReviews(prev => [
+      ...TOP_FEATURED_REVIEWS,
+      optimisticReview,
+      ...prev.filter(r => !r.id.startsWith('top-review-') && r.id !== newId)
+    ]);
+
     try {
       await saveCustomerReviewToFirestore(newReviewData);
-      console.log('[Sanjeevani] Real customer review saved to Firestore project sanjeevani-v2!');
+      console.log('[RakshaSaathi] Real customer review saved to Firestore!');
     } catch (err) {
-      console.warn('[Sanjeevani] Firestore write failed, preserved in local storage:', err);
+      console.warn('[RakshaSaathi] Firestore write failed, preserved in local storage:', err);
     } finally {
       setIsSubmitting(false);
     }
 
-    // Reset Form
     setStory('');
     setRating(5);
     setIsFormOpen(false);
@@ -280,53 +448,50 @@ export const CommunityReviewsSection: React.FC = () => {
     setTimeout(() => setSubmittedNotification(false), 5000);
   };
 
-  // Compute live rating statistics
   const avgRating = reviews.length > 0 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : '5.0';
 
+  const visibleReviews = showAll ? reviews : reviews.slice(0, 6);
+
   return (
-    <section id="community-reviews" className="scroll-reveal mx-auto max-w-7xl px-4 sm:px-6 space-y-8 pt-6">
+    <section id="community-reviews" className="scroll-reveal mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-8 pt-8">
       
       {/* 1. Header & Community Rating Strip */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-slate-200 dark:border-border/80">
-        <div className="space-y-2.5">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full bg-primary/10 text-primary dark:text-emerald-300 text-xs font-black uppercase tracking-wider border border-primary/20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border/80">
+        <div className="space-y-2">
+          <div className="inline-flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-primary dark:text-emerald-400">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span>Community Stories & Lifesaving Impact</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Real Stories from Real Emergencies
           </h2>
-          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 max-w-2xl font-semibold leading-relaxed">
-            Live, verified feedback from students, teachers, parents, and healthcare responders across India who use Sanjeevani v2.0 during critical moments.
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl font-normal leading-relaxed">
+            Live, verified experiences from students, teachers, parents, and healthcare responders across India who use RakshaSaathi v2.0 during critical moments.
           </p>
         </div>
 
         {/* Rating summary & Action button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0 w-full md:w-auto">
-          <div
-            className="p-3 sm:p-3.5 px-4 rounded-2xl bg-white dark:bg-surface border border-slate-200 dark:border-border shadow-xs flex sm:block items-center justify-between sm:space-y-1 text-slate-900 dark:text-white"
-          >
-            <div className="flex items-center space-x-2">
-              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">{avgRating}</span>
-              <div className="flex text-amber-500">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shrink-0">
+          <div className="py-2 px-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200 dark:border-border shadow-xs flex items-center space-x-3">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">{avgRating}</span>
+              <div className="flex text-amber-400">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-500" />
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                 ))}
               </div>
             </div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">
-              {reviews.length > 0 
-                ? `${reviews.length} Verified Experience${reviews.length === 1 ? '' : 's'}`
-                : '100% Verified Community Feedback'}
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {reviews.length} Verified Reviews
             </span>
           </div>
 
           <button
             type="button"
             onClick={() => setIsFormOpen(!isFormOpen)}
-            className="w-full sm:w-auto justify-center inline-flex items-center space-x-2 px-6 py-3.5 rounded-2xl bg-primary text-white text-xs sm:text-sm font-black shadow-md hover:bg-primary-dark transition-all btn-press cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+            className="h-11 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-xs sm:text-sm font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             {isFormOpen ? (
               <>
@@ -345,32 +510,28 @@ export const CommunityReviewsSection: React.FC = () => {
 
       {/* 2. Success Banner */}
       {submittedNotification && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 flex items-center space-x-3 text-sm font-bold shadow-sm animate-in fade-in slide-in-from-top-2">
-          <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/40 text-emerald-900 dark:text-emerald-200 flex items-center space-x-3 text-sm font-medium shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>Thank you for sharing your story! Your review is now live in Cloud Firestore and visible to everyone.</span>
         </div>
       )}
 
-      {/* 3. Interactive Review Form (Collapsible / Inline) */}
+      {/* 3. Interactive Review Form (Collapsible Card matching Design System) */}
       {isFormOpen && (
-        <div
-          data-component="review-form"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A' }}
-          className="review-form p-6 sm:p-8 rounded-3xl bg-white border-2 border-primary/40 shadow-xl space-y-5 animate-in fade-in slide-in-from-top-4 !text-[#0F172A]"
-        >
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+        <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-surface border border-primary/30 shadow-md space-y-5 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border/70 pb-3">
             <div>
-              <h3 style={{ color: '#0F172A' }} className="text-xl font-black !text-[#0F172A]">
-                Share Your Sanjeevani Experience
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                Share Your RakshaSaathi Experience
               </h3>
-              <p style={{ color: '#334155' }} className="text-xs sm:text-sm !text-[#334155] font-semibold mt-0.5">
-                Did Sanjeevani help you in a crisis, during school first-aid drills, or finding generic medicine savings?
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                Did RakshaSaathi help you in a crisis, during school first-aid drills, or finding generic medicine savings?
               </p>
             </div>
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -380,7 +541,7 @@ export const CommunityReviewsSection: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Name */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                   Your Name or Alias *
                 </label>
                 <input
@@ -389,24 +550,22 @@ export const CommunityReviewsSection: React.FC = () => {
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
                   placeholder="e.g. Dr. Rajesh K., Priya S., or Class 10 Student"
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
                 />
               </div>
 
               {/* Role */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                   Your Role / Background
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all cursor-pointer"
                 >
                   {ROLES_OPTIONS.map((r) => (
-                    <option key={r} value={r} style={{ color: '#0F172A', backgroundColor: '#FFFFFF' }}>{r}</option>
+                    <option key={r} value={r} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{r}</option>
                   ))}
                 </select>
               </div>
@@ -415,7 +574,7 @@ export const CommunityReviewsSection: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
               {/* Star Rating */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                   Your Rating
                 </label>
                 <div className="flex items-center space-x-1.5 pt-1">
@@ -426,19 +585,19 @@ export const CommunityReviewsSection: React.FC = () => {
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      className="p-1 text-amber-500 hover:scale-115 transition-transform cursor-pointer"
+                      className="p-0.5 text-amber-400 hover:scale-110 transition-transform cursor-pointer"
                       title={`${star} Stars`}
                     >
                       <Star
-                        className={`w-6 h-6 ${
+                        className={`w-5 h-5 ${
                           (hoverRating || rating) >= star
-                            ? 'fill-amber-400 text-amber-500'
-                            : 'text-slate-300'
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-slate-300 dark:text-slate-600'
                         }`}
                       />
                     </button>
                   ))}
-                  <span style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] ml-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-2">
                     {hoverRating || rating} / 5 Stars
                   </span>
                 </div>
@@ -446,17 +605,16 @@ export const CommunityReviewsSection: React.FC = () => {
 
               {/* Category Tag */}
               <div className="space-y-1.5">
-                <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                   Feature / Topic
                 </label>
                 <select
                   value={categoryTag}
                   onChange={(e) => setCategoryTag(e.target.value)}
-                  style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-bold focus:outline-none focus:border-primary focus:bg-white transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all cursor-pointer"
                 >
                   {CATEGORY_TAGS.map((tag) => (
-                    <option key={tag} value={tag} style={{ color: '#0F172A', backgroundColor: '#FFFFFF' }}>{tag}</option>
+                    <option key={tag} value={tag} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{tag}</option>
                   ))}
                 </select>
               </div>
@@ -464,7 +622,7 @@ export const CommunityReviewsSection: React.FC = () => {
 
             {/* Story / Feedback */}
             <div className="space-y-1.5">
-              <label style={{ color: '#0F172A' }} className="text-xs font-black !text-[#0F172A] uppercase tracking-wider block">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                 Your Story or Feedback *
               </label>
               <textarea
@@ -473,8 +631,7 @@ export const CommunityReviewsSection: React.FC = () => {
                 value={story}
                 onChange={(e) => setStory(e.target.value)}
                 placeholder="What happened? Which feature did you use (CPR metronome, SBAR handoff, burns guide, crowd QR)? How did it make a difference?..."
-                style={{ color: '#0F172A', backgroundColor: '#F8FAFC' }}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 !text-[#0F172A] text-sm font-semibold focus:outline-none focus:border-primary focus:bg-white transition-colors resize-none leading-relaxed"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all resize-none leading-relaxed"
               />
             </div>
 
@@ -483,24 +640,24 @@ export const CommunityReviewsSection: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-full border border-border text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!authorName.trim() || !story.trim() || isSubmitting}
-                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-black shadow-md hover:bg-primary-dark transition-all btn-press disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-full bg-primary text-white text-xs sm:text-sm font-bold shadow-xs hover:bg-primary-dark transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving to Sanjeevani...</span>
+                    <span>Saving to RakshaSaathi...</span>
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    <span>Post Review to Wall</span>
+                    <span>Post Review</span>
                   </>
                 )}
               </button>
@@ -509,157 +666,18 @@ export const CommunityReviewsSection: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Unified Tabular Reviews Directory (No Separate Sections, No Spotlight Labels) */}
+      {/* 4. Responsive Card Grid (1-col mobile, 2-col tablet, 3-col desktop) */}
       {isLoading ? (
         <div className="py-12 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <span style={{ color: '#334155' }} className="text-xs font-bold !text-[#334155]">Loading community stories from Cloud Firestore...</span>
+          <span className="text-xs font-medium text-slate-500">Loading community stories from Cloud Firestore...</span>
         </div>
       ) : reviews.length > 0 ? (
-        <div
-          data-component="review-card"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A', borderColor: '#CBD5E1' }}
-          className="rounded-3xl bg-white border-2 border-slate-300 shadow-lg overflow-hidden !text-[#0F172A]"
-        >
-          {/* Desktop & Tablet HTML Table (md+) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr
-                  style={{ backgroundColor: '#F1F5F9', color: '#0F172A', borderColor: '#CBD5E1' }}
-                  className="border-b-2 text-[11px] font-black uppercase tracking-wider"
-                >
-                  <th className="py-3.5 px-4 w-12 text-center border-r border-slate-200">#</th>
-                  <th className="py-3.5 px-4 w-56 border-r border-slate-200">Reviewer & Role</th>
-                  <th className="py-3.5 px-4 w-48 border-r border-slate-200">Feature & Status</th>
-                  <th className="py-3.5 px-5 border-r border-slate-200">Review</th>
-                  <th className="py-3.5 px-4 w-36 text-right">Rating & Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-sm">
-                {reviews.map((rev, idx) => {
-                  const { cleanName, shortRole, fullTooltip, isDistinct } = formatAuthorDisplay(rev.authorName, rev.role);
-                  const isFounder = shortRole.toLowerCase() === 'founder';
-                  const displayDate = !rev.date || rev.date.toLowerCase() === 'just now' || rev.date.toLowerCase() === 'recent'
-                    ? 'Oct 2026'
-                    : rev.date;
-
-                  return (
-                    <tr
-                      key={rev.id}
-                      title={rev.authorTooltip || fullTooltip}
-                      style={{
-                        backgroundColor: isDistinct ? '#FFFBEB' : idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                        color: '#0F172A'
-                      }}
-                      className={`transition-colors hover:bg-emerald-50/40 align-top ${
-                        isDistinct ? 'border-l-4 border-l-[#0E5A50]' : ''
-                      }`}
-                    >
-                      {/* Col 1: Index */}
-                      <td className="py-4 px-3 text-center font-mono font-black text-xs border-r border-slate-200">
-                        <span
-                          style={
-                            isDistinct
-                              ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                              : { backgroundColor: '#E2E8F0', color: '#334155' }
-                          }
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-md font-black text-[11px]"
-                        >
-                          {String(idx + 1).padStart(2, '0')}
-                        </span>
-                      </td>
-
-                      {/* Col 2: Reviewer & Full Role */}
-                      <td className="py-4 px-4 border-r border-slate-200">
-                        <div className="flex items-start space-x-2.5">
-                          <div
-                            style={
-                              isDistinct
-                                ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                                : { backgroundColor: '#1E293B', color: '#FFFFFF' }
-                            }
-                            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs uppercase shrink-0 mt-0.5 shadow-2xs"
-                          >
-                            {cleanName.charAt(0)}
-                          </div>
-                          <div className="space-y-1">
-                            <div
-                              style={{ color: '#0F172A' }}
-                              className={`${isDistinct ? 'font-black text-[15px]' : 'font-bold text-sm'} !text-[#0F172A] leading-snug`}
-                            >
-                              {cleanName}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1">
-                              <span
-                                style={
-                                  isFounder
-                                    ? { backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }
-                                    : { backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#6EE7B7' }
-                                }
-                                className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                              >
-                                {shortRole}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Col 3: Feature & Verified Status */}
-                      <td className="py-4 px-4 border-r border-slate-200 space-y-1.5">
-                        <span
-                          style={{ backgroundColor: '#FEF3C7', color: '#78350F', borderColor: '#FCD34D' }}
-                          className="text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block"
-                        >
-                          #{rev.categoryTag}
-                        </span>
-                        <div>
-                          <span
-                            style={{ backgroundColor: '#DCFCE7', color: '#166534', borderColor: '#86EFAC' }}
-                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                          >
-                            ✓ Verified
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Col 4: Full Unabridged Review Story */}
-                      <td className="py-4 px-5 border-r border-slate-200">
-                        <p
-                          style={{ color: '#0F172A' }}
-                          className={`text-sm leading-relaxed ${isDistinct ? 'font-semibold' : 'font-medium'} !text-[#0F172A] whitespace-pre-line`}
-                        >
-                          {rev.story}
-                        </p>
-                      </td>
-
-                      {/* Col 5: Rating & Date */}
-                      <td className="py-4 px-4 text-right space-y-1">
-                        <div className="inline-flex items-center justify-end space-x-0.5 text-amber-500">
-                          {[...Array(rev.rating)].map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                          ))}
-                        </div>
-                        <div style={{ color: '#0F172A' }} className="text-xs font-black font-mono !text-[#0F172A]">
-                          {rev.rating}.0 / 5.0
-                        </div>
-                        <div style={{ color: '#475569' }} className="text-[11px] font-semibold !text-[#475569]">
-                          {displayDate}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Unified Tabular Rows (< 768px): All reviews #01 through #N in a single table list */}
-          <div className="md:hidden divide-y-2 divide-slate-200">
-            {reviews.map((rev, idx) => {
-              const rowNumber = idx + 1;
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {visibleReviews.map((rev) => {
               const { cleanName, shortRole, fullTooltip, isDistinct } = formatAuthorDisplay(rev.authorName, rev.role);
+              const isExpanded = expandedStoryIds.has(rev.id);
               const isFounder = shortRole.toLowerCase() === 'founder';
               const displayDate = !rev.date || rev.date.toLowerCase() === 'just now' || rev.date.toLowerCase() === 'recent'
                 ? 'Oct 2026'
@@ -669,109 +687,128 @@ export const CommunityReviewsSection: React.FC = () => {
                 <div
                   key={rev.id}
                   title={rev.authorTooltip || fullTooltip}
-                  style={{
-                    backgroundColor: isDistinct ? '#FFFBEB' : idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                    color: '#0F172A'
-                  }}
-                  className={`p-4 space-y-3 ${isDistinct ? 'border-l-4 border-l-[#0E5A50]' : ''}`}
+                  className={`rounded-2xl bg-white dark:bg-surface border p-5 sm:p-6 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                    isDistinct 
+                      ? 'border-primary/40 ring-1 ring-primary/20 shadow-xs' 
+                      : 'border-slate-200 dark:border-border/80 shadow-xs'
+                  }`}
                 >
-                  {/* Mobile Table Row Header: #Index + Full Name + Full Role Pill (Never truncated!) */}
-                  <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-200/80">
-                    <div className="flex items-start space-x-2.5 min-w-0">
-                      <span
-                        style={
+                  <div className="space-y-3.5">
+                    {/* Header: Avatar, Name, Role, and Star Rating */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${
                           isDistinct
-                            ? { backgroundColor: '#0E5A50', color: '#FFFFFF' }
-                            : { backgroundColor: '#E2E8F0', color: '#334155' }
-                        }
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-md font-mono font-black text-xs shrink-0 mt-0.5"
-                      >
-                        {String(rowNumber).padStart(2, '0')}
-                      </span>
-                      <div>
-                        <div
-                          style={{ color: '#0F172A' }}
-                          className={`${isDistinct ? 'font-black text-[15px]' : 'font-bold text-sm'} !text-[#0F172A] leading-tight`}
-                        >
-                          {cleanName}
+                            ? 'bg-primary text-white'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                        }`}>
+                          {cleanName.charAt(0)}
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <span
-                            style={
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                            {cleanName}
+                          </h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block ${
                               isFounder
-                                ? { backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' }
-                                : { backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#6EE7B7' }
-                            }
-                            className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border inline-block"
-                          >
-                            {shortRole}
-                          </span>
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {shortRole}
+                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              ✓ Verified
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="text-right shrink-0 space-y-1">
-                      <div className="inline-flex items-center space-x-0.5 text-amber-500">
+                      <div className="flex text-amber-400 shrink-0">
                         {[...Array(rev.rating)].map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         ))}
                       </div>
-                      <div style={{ color: '#475569' }} className="text-[11px] font-bold !text-[#475569] block">
-                        {displayDate}
-                      </div>
+                    </div>
+
+                    {/* Tag badge */}
+                    <div>
+                      <span className="inline-block text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-border px-2.5 py-0.5 rounded-full">
+                        #{rev.categoryTag}
+                      </span>
+                    </div>
+
+                    {/* Story Body */}
+                    <div className="relative">
+                      <p className={`text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-normal whitespace-pre-line ${
+                        isExpanded ? '' : 'line-clamp-4'
+                      }`}>
+                        {rev.story}
+                      </p>
+                      {rev.story.length > 180 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleStoryExpansion(rev.id)}
+                          className="mt-1 text-xs font-semibold text-primary dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <span>Show less</span>
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </>
+                          ) : (
+                            <>
+                              <span>Read more</span>
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Mobile Table Sub-Row: Category & Verified Chip */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span
-                      style={{ backgroundColor: '#FEF3C7', color: '#78350F', borderColor: '#FCD34D' }}
-                      className="text-[11px] font-bold px-2.5 py-0.5 rounded-md border"
-                    >
-                      #{rev.categoryTag}
-                    </span>
-                    <span
-                      style={{ backgroundColor: '#DCFCE7', color: '#166534', borderColor: '#86EFAC' }}
-                      className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border"
-                    >
-                      ✓ Verified
-                    </span>
+                  {/* Date Footer */}
+                  <div className="pt-4 mt-4 border-t border-slate-100 dark:border-border/50 text-[11px] text-slate-400">
+                    <span>{displayDate}</span>
                   </div>
-
-                  {/* Mobile Table Body Cell: 100% Full Unabridged Review */}
-                  <p
-                    style={{ color: '#0F172A' }}
-                    className={`text-sm leading-relaxed ${isDistinct ? 'font-semibold' : 'font-medium'} !text-[#0F172A] whitespace-pre-line pt-0.5`}
-                  >
-                    {rev.story}
-                  </p>
                 </div>
               );
             })}
           </div>
+
+          {/* Show All / Show Less Reviews Toggle */}
+          {reviews.length > 6 && (
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAll(prev => !prev)}
+                className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-full border border-border bg-white dark:bg-surface text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <span>
+                  {showAll ? 'Show fewer reviews' : `Show all reviews (${reviews.length})`}
+                </span>
+                {showAll ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
-        /* Empty / Invitation State when no reviews have been submitted yet */
-        <div
-          data-component="empty-reviews-card"
-          style={{ backgroundColor: '#FFFFFF', color: '#0F172A' }}
-          className="p-8 sm:p-14 rounded-3xl bg-white border-2 border-dashed border-primary/30 text-center space-y-5 max-w-2xl mx-auto shadow-sm !text-[#0F172A]"
-        >
-          <div className="w-16 h-16 rounded-3xl bg-primary/10 text-primary mx-auto flex items-center justify-center border border-primary/20 shadow-xs">
-            <MessageSquareHeart className="w-8 h-8 text-primary animate-bounce duration-1000" />
+        /* Empty / Invitation State */
+        <div className="p-8 sm:p-12 rounded-2xl bg-white dark:bg-surface border border-dashed border-border text-center space-y-4 max-w-xl mx-auto shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center">
+            <MessageSquareHeart className="w-6 h-6 text-primary" />
           </div>
-          <div className="space-y-2">
-            <h3 style={{ color: '#0F172A' }} className="text-2xl sm:text-3xl font-black !text-[#0F172A] tracking-tight">
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">
               Be the First to Share Your Experience
             </h3>
-            <p style={{ color: '#334155' }} className="text-sm sm:text-base !text-[#334155] max-w-lg mx-auto font-medium leading-relaxed">
-              Every review helps inspire confidence during emergencies. Tell other students, teachers, and responders how Sanjeevani worked for you.
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+              Every review helps inspire confidence during emergencies. Tell other students, teachers, and responders how RakshaSaathi worked for you.
             </p>
           </div>
           <button
             type="button"
             onClick={() => setIsFormOpen(true)}
-            className="inline-flex items-center space-x-2 px-8 py-3.5 rounded-full bg-primary hover:bg-primary-dark text-white font-black text-sm shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+            className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-full bg-primary hover:bg-primary-dark text-white font-bold text-xs sm:text-sm shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Write the First Review</span>

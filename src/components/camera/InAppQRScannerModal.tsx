@@ -212,7 +212,7 @@ export const InAppQRScannerModal: React.FC<InAppQRScannerModalProps> = ({
       const demoDocket = `${origin}/?docket=TRAUMA-519284&title=Acute%20Road%20Trauma%20Handover&cpr=180&cycles=5&bpm=94&head=yes&water=no&sev=CRITICAL`;
       handleSuccessfulScan(demoDocket);
     } else {
-      handleSuccessfulScan('tel:112\nSANJEEVANI-SOS: Immediate Ambulance Required at Main Crossroad.');
+      handleSuccessfulScan('tel:112\nRAKSHASAATHI-SOS: Immediate Ambulance Required at Main Crossroad.');
     }
   };
 
@@ -258,7 +258,7 @@ export const InAppQRScannerModal: React.FC<InAppQRScannerModalProps> = ({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-ink">
-                Sanjeevani In-App QR Scanner
+                RakshaSaathi In-App QR Scanner
               </h3>
               <p className="text-xs text-ink-muted">
                 Scan Squads, Paramedic Dockets, and Emergency SOS with instant calling & text storage.
@@ -576,7 +576,7 @@ export const InAppQRScannerModal: React.FC<InAppQRScannerModalProps> = ({
               </span>
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => downloadMarkdownFile('Sanjeevani_QR_Scan_History.md', exportHistoryAsMarkdown())}
+                  onClick={() => downloadMarkdownFile('RakshaSaathi_QR_Scan_History.md', exportHistoryAsMarkdown())}
                   disabled={historyList.length === 0}
                   className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-base border border-border text-xs font-bold text-ink hover:bg-border/60 disabled:opacity-40 cursor-pointer"
                   title="Export all scans to Markdown"
@@ -606,7 +606,7 @@ export const InAppQRScannerModal: React.FC<InAppQRScannerModalProps> = ({
                 <QrCode className="w-8 h-8 text-ink-muted mx-auto opacity-50" />
                 <h5 className="text-xs font-bold text-ink">No Scans Recorded Yet</h5>
                 <p className="text-[11px] text-ink-muted max-w-xs mx-auto">
-                  When you scan a Sanjeevani QR code or upload an image, it will be automatically saved here for offline reference.
+                  When you scan a RakshaSaathi QR code or upload an image, it will be automatically saved here for offline reference.
                 </p>
               </div>
             ) : (

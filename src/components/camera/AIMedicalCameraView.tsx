@@ -222,7 +222,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
     } else if (type === 'docket') {
       handleProcessScannedQR(`${origin}/?docket=TRAUMA-519284&title=Acute%20Road%20Trauma%20Handover&cpr=180&cycles=5&bpm=94&head=yes&water=no&sev=CRITICAL`);
     } else {
-      handleProcessScannedQR('tel:112\nSANJEEVANI-SOS: Immediate Ambulance Required at Main Crossroad.');
+      handleProcessScannedQR('tel:112\nRAKSHASAATHI-SOS: Immediate Ambulance Required at Main Crossroad.');
     }
   };
 
@@ -442,7 +442,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
       isHardStop = true;
     }
 
-    const demoBase64 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%2318221e"/><circle cx="200" cy="150" r="65" fill="%230E5A50" fill-opacity="0.35"/><circle cx="200" cy="150" r="40" fill="%23b91c1c"/><text x="200" y="145" fill="white" font-size="13" font-family="sans-serif" text-anchor="middle" font-weight="bold">${preset.toUpperCase()}</text><text x="200" y="165" fill="%23F0A85B" font-size="11" font-family="sans-serif" text-anchor="middle">Sanjeevani AI Vision</text></svg>`;
+    const demoBase64 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="%2318221e"/><circle cx="200" cy="150" r="65" fill="%230E5A50" fill-opacity="0.35"/><circle cx="200" cy="150" r="40" fill="%23b91c1c"/><text x="200" y="145" fill="white" font-size="13" font-family="sans-serif" text-anchor="middle" font-weight="bold">${preset.toUpperCase()}</text><text x="200" y="165" fill="%23F0A85B" font-size="11" font-family="sans-serif" text-anchor="middle">RakshaSaathi AI Vision</text></svg>`;
     
     setInjuryImage(demoBase64);
     setIsAnalyzingInjury(true);
@@ -1616,7 +1616,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
                     </span>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => downloadMarkdownFile('Sanjeevani_QR_Scan_History.md', exportHistoryAsMarkdown())}
+                        onClick={() => downloadMarkdownFile('RakshaSaathi_QR_Scan_History.md', exportHistoryAsMarkdown())}
                         disabled={qrHistoryList.length === 0}
                         className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center space-x-1 disabled:opacity-40 cursor-pointer"
                       >

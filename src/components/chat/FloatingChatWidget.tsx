@@ -38,7 +38,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [messages, setMessages] = useState<FloatingMessage[]>([
     {
       sender: 'model',
-      text: 'Hello! I am Sanjeevani AI Guardian. What first-aid question do you have right now?'
+      text: 'Hello! I am RakshaSaathi AI Guardian. What first-aid question do you have right now?'
     }
   ]);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
@@ -125,7 +125,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
           <button
             onClick={() => setIsOpen(true)}
             className="btn-fluid btn-fluid-accent elevation-3 h-11 w-11 sm:h-auto sm:w-auto sm:pl-4 sm:pr-5 sm:py-3 rounded-full text-ink text-xs font-extrabold shadow-xl hover:scale-105 flex items-center justify-center sm:space-x-2.5"
-            title="Ask Sanjeevani AI Guardian"
+            title="Ask RakshaSaathi AI Guardian"
             aria-label="Open AI Guardian Chat"
           >
             <div className="relative">

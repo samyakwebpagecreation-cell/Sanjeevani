@@ -225,7 +225,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ onGuideLive, onOpenCha
           <button
             onClick={() => onOpenChat(searchQuery || 'Tell me about first-aid treatment for common injuries')}
             className="inline-flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-accent to-[#E08A35] text-ink font-bold text-xs shadow-xs hover:brightness-105 btn-press shrink-0"
-            title="Ask Sanjeevani AI Guardian"
+            title="Ask RakshaSaathi AI Guardian"
           >
             <Bot className="w-4 h-4 text-ink" />
             <span>Ask AI Guardian</span>

@@ -77,7 +77,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       {
         id: 'welcome',
         sender: 'model',
-        text: "Namaste! I am your Sanjeevani AI First-Aid Guardian, built on AHA 2020 and AIIMS Emergency Medicine guidelines.\n\nAsk any urgent first-aid question, speak your symptoms with the microphone, or attach an injury photo or incident video. I provide immediate 1-2-3 steps, contraindication warnings, and live hospital route navigation.\n\n*If the victim is unconscious or not breathing, tap 112 SOS immediately.*",
+        text: "Namaste! I am your RakshaSaathi AI First-Aid Guardian, built on AHA 2020 and AIIMS Emergency Medicine guidelines.\n\nAsk any urgent first-aid question, speak your symptoms with the microphone, or attach an injury photo or incident video. I provide immediate 1-2-3 steps, contraindication warnings, and live hospital route navigation.\n\n*If the victim is unconscious or not breathing, tap 112 SOS immediately.*",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         modelUsed: 'gemini-flash-lite-latest',
         modelDisplayName: 'Gemini Flash-Lite (Tier 1)',
@@ -527,7 +527,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <button
                 onClick={onBackToHome}
                 className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-base hover:bg-border/60 text-ink text-xs font-bold transition-colors btn-press shadow-2xs cursor-pointer border border-border/70 shrink-0"
-                title="Return to Sanjeevani Hub"
+                title="Return to RakshaSaathi Hub"
               >
                 <ArrowLeft className="w-4 h-4 text-primary" />
                 <span className="hidden xs:inline">Hub</span>
@@ -544,7 +544,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     className="text-sm sm:text-lg font-black tracking-tight text-[#0E5A50] dark:!text-emerald-400 truncate"
                     style={{ color: '#0E5A50' }}
                   >
-                    Sanjeevani AI Guardian
+                    RakshaSaathi AI Guardian
                   </h1>
                   <span className="flex h-2 w-2 relative shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -658,7 +658,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   ) : (
                     <>
                       <Bot className="w-4 h-4 text-accent" />
-                      <span className="font-bold text-ink">Sanjeevani Guardian</span>
+                      <span className="font-bold text-ink">RakshaSaathi Guardian</span>
                       <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center space-x-1.5 flex-wrap">
                         {msg.latencyMs !== undefined && msg.latencyMs > 0 && (
                           <span className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-bold text-[9px]">

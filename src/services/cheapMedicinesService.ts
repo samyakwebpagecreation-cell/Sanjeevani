@@ -272,7 +272,7 @@ Snippet: ${r.snippet}
 
   try {
     const prompt = `
-You are Sanjeevani AI Clinical Pharmacologist & Medicine Price Auditor.
+You are RakshaSaathi AI Clinical Pharmacologist & Medicine Price Auditor.
 The user is looking for cheap/generic alternatives and price comparison for: "${cleanQuery}".
 
 Here are the REAL WEB SEARCH RESULTS from Firecrawl:
@@ -555,7 +555,7 @@ export async function scanPrescriptionImage(
 
   try {
     const prompt = `
-You are Sanjeevani AI Clinical Pharmacist and Medical Prescription OCR specialist.
+You are RakshaSaathi AI Clinical Pharmacist and Medical Prescription OCR specialist.
 Inspect this photo of a doctor's handwritten or printed prescription, clinic note, or medicine strip from India.
 
 Carefully read all prescribed medicines. For each medicine extract:

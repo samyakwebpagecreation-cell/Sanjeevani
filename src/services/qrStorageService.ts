@@ -101,10 +101,10 @@ export function clearScannedQRHistory(): void {
 export function exportHistoryAsMarkdown(): string {
   const history = getScannedQRHistory();
   if (history.length === 0) {
-    return '# Sanjeevani v2 - Scanned QR History\n\nNo records found.';
+    return '# RakshaSaathi v2 - Scanned QR History\n\nNo records found.';
   }
 
-  let md = `# 🛡️ SANJEEVANI v2 - SCANNED QR & EMERGENCY TELEMETRY LOG
+  let md = `# 🛡️ RAKSHASAATHI v2 - SCANNED QR & EMERGENCY TELEMETRY LOG
 **Generated:** ${new Date().toLocaleString()}  
 **Total Records:** ${history.length}  
 

@@ -141,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
               <div>
                 <span className="font-display-italic text-2xl font-bold text-ink leading-none block">
-                  Sanjeevani
+                  RakshaSaathi
                 </span>
                 <span className="text-[10px] font-bold tracking-widest text-accent uppercase">
                   INDIA'S AI FIRST-AID INTELLIGENCE
@@ -318,7 +318,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                   <div>
                     <label className="block text-[11px] font-semibold text-ink-muted mb-1">
-                      How did you hear about Sanjeevani?
+                      How did you hear about RakshaSaathi?
                     </label>
                     <select
                       value={source}
@@ -493,7 +493,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     ))}
                   </div>
                   <p className="text-[11px] italic text-ink leading-relaxed">
-                    "Sanjeevani's CPR metronome and AR placement gave our high school first-aid club immense confidence. Truly lifesaving."
+                    "RakshaSaathi's CPR metronome and AR placement gave our high school first-aid club immense confidence. Truly lifesaving."
                   </p>
                   <div className="flex items-center space-x-2 pt-1">
                     <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary">
@@ -530,7 +530,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           <div className="pt-3 border-t border-border flex items-center justify-between text-[10px] text-ink-muted">
-            <span>Sanjeevani V.2.0.0</span>
+            <span>RakshaSaathi V.2.0.0</span>
             <span>Firebase Connected (sanjeevani-v2)</span>
           </div>
         </div>

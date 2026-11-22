@@ -87,7 +87,7 @@ function AppContent() {
   // STRICT LIGHT MODE AS DEFAULT
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('sanjeevani_theme');
+      const saved = localStorage.getItem('rakshasaathi_theme') || localStorage.getItem('sanjeevani_theme');
       return saved === 'dark';
     } catch {
       return false; // Default: Light mode
@@ -97,9 +97,11 @@ function AppContent() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('rakshasaathi_theme', 'dark');
       localStorage.setItem('sanjeevani_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('rakshasaathi_theme', 'light');
       localStorage.setItem('sanjeevani_theme', 'light');
     }
   }, [isDarkMode]);

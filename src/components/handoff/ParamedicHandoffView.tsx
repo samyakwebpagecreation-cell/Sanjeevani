@@ -266,7 +266,7 @@ export const ParamedicHandoffView: React.FC<ParamedicHandoffViewProps> = ({
   };
 
   const handleDownloadMarkdown = () => {
-    const md = `# 📋 SANJEEVANI v2 - PARAMEDIC TRAUMA HANDOVER DOCKET
+    const md = `# 📋 RAKSHASAATHI v2 - PARAMEDIC TRAUMA HANDOVER DOCKET
 **Docket ID:** \`#${docketId}\`  
 **Triage Severity:** ${incidentSeverity}  
 **Trauma Stopwatch Active:** ${formatTime(elapsedSeconds)}  
@@ -298,13 +298,13 @@ ${generateSBARScript()}
 ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')}
 
 ---
-*Sanjeevani v2 Pre-Hospital Black-Box Trauma Intelligence.*
+*RakshaSaathi v2 Pre-Hospital Black-Box Trauma Intelligence.*
 `;
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Sanjeevani_${docketId}_Docket.md`;
+    a.download = `RakshaSaathi_${docketId}_Docket.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -569,7 +569,7 @@ ${timeline.map(t => `  - [${t.time}] ${t.event} (${t.detail || ''})`).join('\n')
                   Answers to the 5 Paramedic Golden Questions
                 </h3>
                 <p className="text-xs text-ink-muted">
-                  Paramedics lose 5 to 10 minutes trying to verify these questions at the chaotic scene. Sanjeevani records them deterministically.
+                  Paramedics lose 5 to 10 minutes trying to verify these questions at the chaotic scene. RakshaSaathi records them deterministically.
                 </p>
               </div>
 

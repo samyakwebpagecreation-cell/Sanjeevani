@@ -118,6 +118,7 @@ export function createParamedicHandout(
 
   // 6. JSON payload for offline QR scanning
   const qrPayload = {
+    rakshasaathiHandoffId: handoutId,
     sanjeevaniHandoffId: handoutId,
     timestamp,
     urgency: isEmergency ? 'CRITICAL_112' : 'URGENT',

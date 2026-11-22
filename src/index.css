@@ -801,6 +801,28 @@ input::selection, textarea::selection {
     linear-gradient(to bottom, rgba(240, 168, 91, 0.05) 1px, transparent 1px);
 }
 
+/* ECG Pulse Animation for Rapid Response Cockpit */
+@keyframes ecg-dash {
+  0% {
+    stroke-dashoffset: 400;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-ecg-pulse {
+  stroke-dasharray: 400;
+  animation: ecg-dash 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ecg-pulse {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 /* ========================================== */
 /* Calm Pure White Splash Screen Keyframes   */
 /* ========================================== */
