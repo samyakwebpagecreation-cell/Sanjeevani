@@ -218,7 +218,7 @@ export const RespondView: React.FC<RespondViewProps> = ({
       ...prev
     ]);
     logTelemetryEvent(
-      'Gemini 3.6 Flash Video Forensic Telemetry Ingested',
+      'AI Video Forensic Telemetry Ingested',
       `Identified: ${analysis.identifiedInjury} | MOI: ${analysis.mechanismOfInjury}`,
       'sensor'
     );

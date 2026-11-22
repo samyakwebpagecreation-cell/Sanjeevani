@@ -614,7 +614,7 @@ Return ONLY a valid JSON object matching this schema without markdown or formatt
     }
     parts.push({ text: promptText });
 
-    onProgress?.('Synthesizing direct delegation task matrix with Gemini...');
+    onProgress?.('Synthesizing direct delegation task matrix with Clinical AI...');
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${AI_CONFIG.apiKey}`;
     const controller = new AbortController();

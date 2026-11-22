@@ -48,7 +48,7 @@ export function createParamedicHandout(
   aiText: string,
   timestamp: string,
   isEmergency: boolean = false,
-  modelUsed: string = 'Gemini AI',
+  modelUsed: string = 'Clinical AI',
   facility?: EmergencyFacility,
   userAddress?: string
 ): ParamedicHandoutData {

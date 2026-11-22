@@ -284,7 +284,7 @@ export const PracticeView: React.FC = () => {
             </h1>
             <span className="inline-flex items-center text-xs font-bold text-ink bg-accent/20 px-2.5 py-0.5 rounded-full border border-accent/30">
               <Sparkles className="w-3.5 h-3.5 mr-1 text-accent" />
-              Gemma 4 31B AI Engine
+              Clinical AI Engine
             </span>
           </div>
           <p className="text-xs sm:text-sm text-ink-muted">
@@ -409,7 +409,7 @@ export const PracticeView: React.FC = () => {
                 {isGeneratingAi ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-ink" />
-                    <span>Gemma 4 31B Generating Scenario...</span>
+                    <span>Generating AI Scenario...</span>
                   </>
                 ) : (
                   <>

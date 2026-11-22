@@ -54,7 +54,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   // Rotating search engine placeholders
   const placeholderSuggestions = [
-    'Ask RakshaSaathi Bot (Gemma 4-31B): e.g. CPR 1-2-3 steps...',
+    'Ask RakshaSaathi Bot: e.g. CPR 1-2-3 steps...',
     'Search medicine: e.g. Dolo 650 Jan Aushadhi generic & savings...',
     'Search home remedies: e.g. burn care, severe cough, acidity...',
     'Emergency decision: e.g. choking baby, snakebite protocol...'
@@ -171,7 +171,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   // Copy structured output
   const handleCopy = () => {
     if (!result) return;
-    let textToCopy = `[RakshaSaathi Bot (Gemma 4-31B IT)]\n\n`;
+    let textToCopy = `[RakshaSaathi Bot - Clinical First-Aid Intelligence]\n\n`;
     textToCopy += `${result.headline}\n\n`;
     if (result.emergencySteps) {
       textToCopy += `1-2-3 Emergency Steps:\n`;
@@ -263,7 +263,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             setTimeout(() => inputRef.current?.focus(), 150);
           }}
           className="group flex items-center space-x-2.5 px-4 py-2.5 rounded-full bg-[#0E5A50] text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 border border-emerald-400/30"
-          title="Open RakshaSaathi Bot (Gemma 4-31B Search)"
+          title="Open RakshaSaathi Bot Search"
         >
           <div className="relative flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-emerald-300 animate-pulse" />
@@ -273,7 +273,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             </span>
           </div>
           <span className="text-xs font-black tracking-wide">RakshaSaathi Bot</span>
-          <span className="text-[10px] bg-emerald-700/80 px-2 py-0.5 rounded-full font-bold">Gemma 4</span>
+          <span className="text-[10px] bg-emerald-700/80 px-2 py-0.5 rounded-full font-bold">AI Clinical</span>
         </button>
       </div>
     );
@@ -587,7 +587,7 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               </div>
               <div className="hidden sm:flex flex-col text-left leading-none">
                 <span className="text-[11px] font-black text-slate-900 dark:text-white">RakshaSaathi Bot</span>
-                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Gemma 4 · 31B</span>
+                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Clinical AI Engine</span>
               </div>
             </div>
 

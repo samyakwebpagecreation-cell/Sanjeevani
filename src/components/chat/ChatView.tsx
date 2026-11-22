@@ -80,7 +80,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         text: "Namaste! I am your RakshaSaathi AI First-Aid Guardian, built on AHA 2020 and AIIMS Emergency Medicine guidelines.\n\nAsk any urgent first-aid question, speak your symptoms with the microphone, or attach an injury photo or incident video. I provide immediate 1-2-3 steps, contraindication warnings, and live hospital route navigation.\n\n*If the victim is unconscious or not breathing, tap 112 SOS immediately.*",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         modelUsed: 'gemini-flash-lite-latest',
-        modelDisplayName: 'Gemini Flash-Lite (Tier 1)',
+        modelDisplayName: 'Clinical Neural Engine',
         tierUsed: 1,
         handout: createParamedicHandout(
           'welcome',
@@ -228,14 +228,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
       let replyText = '';
       let isEmergency = false;
       let modelUsed = 'gemini-flash-lite-latest';
-      let modelDisplayName = 'Gemini Flash-Lite (Tier 1)';
+      let modelDisplayName = 'Clinical Neural Engine';
       let tierUsed = 1;
       let latencyMs = 0;
       let failSafeTriggered = false;
       let forensicReport: VideoIncidentAnalysis | undefined = undefined;
 
       setFailSafeStatus({
-        activeModelName: 'Gemini Flash-Lite (Tier 1)',
+        activeModelName: 'Clinical Neural Engine',
         tier: 1,
         isSwitching: false,
         secondsElapsed: 0
@@ -505,7 +505,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           text: "Conversation reset. What emergency or first-aid question do you need assistance with?",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           modelUsed: 'gemini-flash-lite-latest',
-          modelDisplayName: 'Gemini Flash-Lite (Tier 1)',
+          modelDisplayName: 'Clinical Neural Engine',
           tierUsed: 1
         }
       ]);

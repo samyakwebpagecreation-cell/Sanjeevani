@@ -546,7 +546,7 @@ export async function scanPrescriptionImage(
 ): Promise<PrescriptionScanReport> {
   const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
-  onStatus?.('Analyzing prescription photo with Gemini Vision OCR...');
+  onStatus?.('Analyzing prescription photo with Clinical Vision OCR...');
 
   let doctorName = 'Consultant Physician';
   let rxDate = 'Recent';

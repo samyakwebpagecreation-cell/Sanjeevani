@@ -19,35 +19,35 @@ export interface ModelTier {
 export const FAIL_SAFE_MODELS: ModelTier[] = [
   {
     id: 'gemma-4-31b-it',
-    displayName: 'Gemma 4-31B IT',
+    displayName: 'Clinical Reasoning Engine',
     tier: 1,
     description: 'High-speed medical & general assistance reasoning engine (~0.8s)',
     expectedSpeed: '0.8-1.5s'
   },
   {
     id: 'gemini-flash-lite-latest',
-    displayName: 'Flash-Lite (Tier 2)',
+    displayName: 'Rapid Response Engine',
     tier: 2,
     description: 'Ultra-low latency clinical intelligence (~1.2s)',
     expectedSpeed: '1-2s'
   },
   {
     id: 'gemini-3.1-flash-lite',
-    displayName: 'Flash 3.1-Lite (Tier 3)',
+    displayName: 'Protocol Engine (Tier 3)',
     tier: 3,
     description: 'High-throughput emergency protocol & vision reasoning',
     expectedSpeed: '1-2s'
   },
   {
     id: 'gemini-3.5-flash-lite',
-    displayName: 'Flash 3.5-Lite (Tier 4)',
+    displayName: 'Protocol Engine (Tier 4)',
     tier: 4,
     description: 'State-of-the-art multimodal clinical reasoning',
     expectedSpeed: '1-3s'
   },
   {
     id: 'gemini-flash-latest',
-    displayName: 'Flash (Tier 5)',
+    displayName: 'Triage Engine (Tier 5)',
     tier: 5,
     description: 'Deep medical reasoning backup',
     expectedSpeed: '2-4s'
@@ -555,7 +555,7 @@ export async function askRakshaSaathiBot(
 
   // 3. Try Cascading Generative AI Models (Gemma 4-31B IT flagship)
   const systemPrompt = `
-You are RakshaSaathi Bot (powered by Gemma 4-31B IT), an ultra-fast, clinical medical search engine and emergency decision assistant for Indian schools, families, and bystanders.
+You are RakshaSaathi Bot, an ultra-fast, clinical medical search engine and emergency decision assistant for Indian schools, families, and bystanders.
 The user asked: "${query}"
 
 Provide a crisp, direct, highly structured response:
@@ -628,7 +628,7 @@ Keep response punchy, actionable, and formatted with clean markdown.`;
             homeRemedies,
             fullMarkdown: text,
             modelUsed: model.id,
-            modelDisplayName: 'Gemma 4-31B IT',
+            modelDisplayName: 'RakshaSaathi Clinical Engine',
             latencyMs
           };
         }
@@ -659,7 +659,7 @@ Keep response punchy, actionable, and formatted with clean markdown.`;
     offlineMarkdown = `### 🌿 Verified Evidence-Based Home Remedies\n\n` +
       homeRemedies.map((r) => `* **${r.title}:** ${r.preparation}\n  *Caution: ${r.safetyCaution}*`).join('\n\n');
   } else {
-    offlineMarkdown = `I am RakshaSaathi Bot (Gemma 4-31B IT). For immediate first-aid, identify the emergency or type a medicine/symptom name for 1-2-3 steps and generic Jan Aushadhi substitutes.`;
+    offlineMarkdown = `I am RakshaSaathi Bot. For immediate first-aid, identify the emergency or type a medicine/symptom name for 1-2-3 steps and generic Jan Aushadhi substitutes.`;
   }
 
   return {
@@ -680,7 +680,7 @@ Keep response punchy, actionable, and formatted with clean markdown.`;
     homeRemedies,
     fullMarkdown: offlineMarkdown,
     modelUsed: 'gemma-4-31b-it',
-    modelDisplayName: 'Gemma 4-31B IT',
+    modelDisplayName: 'RakshaSaathi Clinical Engine',
     latencyMs: offlineLatency
   };
 }

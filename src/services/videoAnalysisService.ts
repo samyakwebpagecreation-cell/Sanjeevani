@@ -174,7 +174,7 @@ export async function analyzeVideoIncident(
   }
 
   if (onProgress) {
-    onProgress(55, 'Submitting multi-frame video sequence to Google Gemini 3.6 Flash...');
+    onProgress(55, 'Submitting multi-frame video sequence to AI Video Forensic Engine...');
   }
 
   const promptInstructions = `

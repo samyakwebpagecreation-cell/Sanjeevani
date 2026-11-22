@@ -626,7 +626,7 @@ export const HomeRemediesView: React.FC<HomeRemediesViewProps> = ({
                 <span>Jan Aushadhi Generic Radar</span>
               </span>
               <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-base text-ink-muted border border-border">
-                Gemma 4-31B AI Engine
+                Clinical Pharmacology Engine
               </span>
             </div>
 
@@ -754,7 +754,7 @@ export const HomeRemediesView: React.FC<HomeRemediesViewProps> = ({
             <div className="space-y-1">
               <div className="inline-flex items-center space-x-2 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                 <Sparkles className="w-4 h-4 text-emerald-500" />
-                <span>Gemma 4-31B Clinical Intelligence Synthesis</span>
+                <span>Clinical Evidence Intelligence Synthesis</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-ink">{customAIResult.headline}</h2>
               <p className="text-xs text-ink-muted">Query: "{customAIResult.query}" • Responded in {customAIResult.latencyMs}ms</p>

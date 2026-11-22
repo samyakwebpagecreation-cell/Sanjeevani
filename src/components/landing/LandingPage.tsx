@@ -104,7 +104,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 1. HERO SECTION (Warm Gradient Container & Yellow Highlight) */}
       {/* ======================================================== */}
       <section className="relative pt-4 sm:pt-6 lg:pt-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="relative overflow-hidden rounded-[32px] sm:rounded-[36px] bg-gradient-to-br from-[#FFFDF7] via-[#FFF9EE] to-[#FFF1D0] dark:from-[#13231f] dark:via-[#162722] dark:to-[#1a2f29] border border-amber-200/60 dark:border-emerald-800/30 p-6 sm:p-10 lg:p-12 shadow-sm">
+        <div 
+          data-component="hero-card"
+          className="hero-light-surface relative overflow-hidden rounded-[32px] sm:rounded-[36px] bg-gradient-to-br from-[#FFFDF7] via-[#FFF9EE] to-[#FFF1D0] border border-amber-200/60 p-6 sm:p-10 lg:p-12 shadow-sm text-slate-900"
+        >
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
@@ -112,19 +115,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="lg:col-span-7 space-y-5 sm:space-y-6">
               
               {/* Eyebrow Pill Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200/70 dark:border-white/10 text-xs shadow-2xs">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-slate-300/80 text-xs shadow-2xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
-                <span className="font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] sm:text-[11px]">
+                <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px] sm:text-[11px]">
                   PRE-HOSPITAL DIGITAL NERVOUS SYSTEM
                 </span>
                 <span className="text-slate-400">•</span>
-                <span className="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                  Built on AHA 2020 & AIIMS Guidelines
+                <span className="text-[10px] sm:text-[11px] text-slate-700 font-semibold">
+                  Built on AHA 2020 &amp; AIIMS Guidelines
                 </span>
               </div>
 
               {/* Bold Display Heading with Golden Yellow Highlighter Box */}
-              <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+              <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black text-slate-900 tracking-tight leading-[1.12]">
                 Protect Lives in the
                 <div className="mt-2">
                   <span className="inline-block px-4 py-2 sm:px-6 sm:py-2 rounded-2xl sm:rounded-3xl bg-[#FED766] text-slate-900 shadow-xs">
@@ -134,7 +137,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </h1>
 
               {/* 2-Line Plain-Language Subhead */}
-              <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed max-w-xl font-normal">
+              <p className="hero-body-text text-sm sm:text-base text-slate-900 font-medium leading-relaxed max-w-xl">
                 When someone collapses, sirens are 15 minutes away in traffic. RakshaSaathi turns helpless panic into calm, life-saving instincts with instant AI triage, 110 BPM guided CPR, cheap generic medicine savings, and zero-download crowd dispatch.
               </p>
 
@@ -145,27 +148,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="h-12 px-7 rounded-full bg-[#0E5A50] hover:bg-[#0a443c] text-white font-bold text-sm sm:text-base shadow-sm hover:shadow-md flex items-center justify-center space-x-2 transition-all cursor-pointer"
                 >
                   <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                  <span>Launch AI Guardian</span>
-                  <span>&rarr;</span>
+                  <span className="text-white">Launch AI Guardian</span>
+                  <span className="text-white">&rarr;</span>
                 </button>
 
                 <button
                   onClick={() => onSelectDestination('camera')}
-                  className="h-12 px-7 rounded-full bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-bold text-sm sm:text-base hover:bg-slate-50 dark:hover:bg-slate-700/50 shadow-xs flex items-center justify-center space-x-2 transition-all cursor-pointer"
+                  className="h-12 px-7 rounded-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-900 font-bold text-sm sm:text-base shadow-xs flex items-center justify-center space-x-2 transition-all cursor-pointer"
                 >
-                  <Camera className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-                  <span>Open AI Medical Camera</span>
+                  <Camera className="w-4.5 h-4.5 text-slate-800" />
+                  <span className="text-slate-900 font-bold">Open AI Medical Camera</span>
                 </button>
               </div>
 
               {/* School Credit Line with 3 circular avatars S J K */}
-              <div className="pt-2 flex items-center space-x-2.5 text-xs text-slate-700 dark:text-slate-300">
+              <div className="hero-trust-text pt-2 flex items-center space-x-2.5 text-xs text-slate-800">
                 <div className="flex -space-x-1 items-center shrink-0">
-                  <span className="w-5 h-5 rounded-full bg-[#0E5A50] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">S</span>
-                  <span className="w-5 h-5 rounded-full bg-[#F59E0B] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">J</span>
-                  <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">K</span>
+                  <span className="w-5 h-5 rounded-full bg-[#0E5A50] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">S</span>
+                  <span className="w-5 h-5 rounded-full bg-[#F59E0B] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">J</span>
+                  <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">K</span>
                 </div>
-                <span className="leading-snug font-medium">
+                <span className="leading-snug font-semibold text-slate-800">
                   Built for students, teachers &amp; families across India • Seth M.R. Jaipuria School
                 </span>
               </div>
@@ -174,24 +177,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Right Column: Rapid Response Cockpit */}
             <div className="lg:col-span-5">
-              <div className="rounded-3xl bg-white dark:bg-[#12221e] border border-slate-200/80 dark:border-white/10 p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-6 space-y-4 shadow-xl text-slate-900">
                 
                 {/* Cockpit Card Header */}
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center space-x-2.5">
-                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-[#0E5A50] dark:text-emerald-400">
+                    <div className="p-2 rounded-xl bg-emerald-50 text-[#0E5A50]">
                       <HeartPulse className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                      <span className="text-xs font-bold text-slate-900 block">
                         Rapid Response Cockpit
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="text-[11px] text-slate-600">
                         1-Tap Emergency Field Instruments
                       </span>
                     </div>
                   </div>
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#E8F5E9] dark:bg-emerald-950/60 text-[#1B5E20] dark:text-emerald-300 text-[10px] font-bold border border-emerald-200/60 dark:border-emerald-800/40">
+                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#E8F5E9] text-[#1B5E20] text-[10px] font-bold border border-emerald-200/80">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block" />
                     <span>PWA READY</span>
                   </span>
@@ -201,64 +204,64 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => onStartRespond('unconscious')}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-[#0E5A50]/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 border border-slate-200 hover:border-[#0E5A50]/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
-                      <HeartPulse className="w-4 h-4 text-[#0E5A50] dark:text-emerald-400" />
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-[#0E5A50] dark:text-emerald-400">110 BPM</span>
+                      <HeartPulse className="w-4 h-4 text-[#0E5A50]" />
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-[#0E5A50]">110 BPM</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#0E5A50] dark:group-hover:text-emerald-400 transition-colors">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-[#0E5A50] transition-colors">
                       Adult CPR Guide
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <p className="text-[11px] text-slate-600 leading-tight">
                       Audio metronome + sternum reticle
                     </p>
                   </button>
 
                   <button
                     onClick={() => onSelectDestination('camera')}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-sky-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 border border-slate-200 hover:border-sky-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
-                      <Camera className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300">VISION AI</span>
+                      <Camera className="w-4 h-4 text-sky-600" />
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800">VISION AI</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-sky-700 transition-colors">
                       Wound & Rx Scan
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <p className="text-[11px] text-slate-600 leading-tight">
                       Optical triage & strip OCR
                     </p>
                   </button>
 
                   <button
                     onClick={() => onSelectDestination('medicines')}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-amber-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 border border-slate-200 hover:border-amber-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
-                      <Pill className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">-75% MRP</span>
+                      <Pill className="w-4 h-4 text-amber-600" />
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">-75% MRP</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
                       Jan Aushadhi Meds
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <p className="text-[11px] text-slate-600 leading-tight">
                       Exact generic salt substitutes
                     </p>
                   </button>
 
                   <button
                     onClick={() => onSelectDestination('handoff')}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-indigo-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 border border-slate-200 hover:border-indigo-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
-                      <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">0.5s SYNC</span>
+                      <QrCode className="w-4 h-4 text-indigo-600" />
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-900">0.5s SYNC</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
                       SBAR Trauma QR
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <p className="text-[11px] text-slate-600 leading-tight">
                       Offline 108/112 EMS docket
                     </p>
                   </button>

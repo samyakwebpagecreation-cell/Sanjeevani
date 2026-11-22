@@ -136,27 +136,32 @@
 }
 
 /* Explicit Hero Celestial Card Contrast Guarantee:
-   Ensures all text inside the warm ivory-cream Hero card is always deep, high-contrast dark slate */
+   Ensures all text inside the warm ivory-cream Hero card is always deep, high-contrast dark slate in all modes */
 .hero-light-surface,
-[data-component="hero-card"] {
+[data-component="hero-card"],
+[data-component="hero-card"] * {
   --app-ink: #0F172A;
   --app-ink-muted: #334155;
+}
+
+[data-component="hero-card"] h1,
+[data-component="hero-card"] h1 span {
   color: #0F172A !important;
 }
 
-.hero-title-text,
-[data-component="hero-card"] h1 {
-  color: #12211D !important;
-}
-
-.hero-body-text,
+[data-component="hero-card"] p,
 [data-component="hero-card"] p.hero-body-text {
   color: #0F172A !important;
 }
 
-.hero-trust-text,
-[data-component="hero-card"] .hero-trust-text {
+[data-component="hero-card"] .hero-trust-text,
+[data-component="hero-card"] .hero-trust-text span {
   color: #1E293B !important;
+}
+
+[data-component="hero-card"] button.bg-white,
+[data-component="hero-card"] button.bg-white span {
+  color: #0F172A !important;
 }
 
 /* Explicit review card styling: keeps crisp white card surface with dark slate typography in both light and dark mode */
