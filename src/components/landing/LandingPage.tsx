@@ -101,75 +101,85 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       )}
 
       {/* ======================================================== */}
-      {/* 1. HERO SECTION (Clean 2-Column Desktop / Stacked Mobile) */}
+      {/* 1. HERO SECTION (Warm Gradient Container & Yellow Highlight) */}
       {/* ======================================================== */}
       <section className="relative pt-4 sm:pt-6 lg:pt-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-surface border border-slate-200/90 dark:border-border/80 p-6 sm:p-10 lg:p-12 shadow-sm">
+        <div className="relative overflow-hidden rounded-[32px] sm:rounded-[36px] bg-gradient-to-br from-[#FFFDF7] via-[#FFF9EE] to-[#FFF1D0] dark:from-[#13231f] dark:via-[#162722] dark:to-[#1a2f29] border border-amber-200/60 dark:border-emerald-800/30 p-6 sm:p-10 lg:p-12 shadow-sm">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             
             {/* Left Column: Narrative & Primary CTAs */}
             <div className="lg:col-span-7 space-y-5 sm:space-y-6">
               
-              {/* Eyebrow Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary dark:text-emerald-400">
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+              {/* Eyebrow Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 border border-slate-200/70 dark:border-white/10 text-xs shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                <span className="font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider text-[10px] sm:text-[11px]">
+                  PRE-HOSPITAL DIGITAL NERVOUS SYSTEM
                 </span>
-                <span className="uppercase tracking-wider text-[11px] font-bold">
-                  Pre-hospital Emergency Protocol Engine
+                <span className="text-slate-400">•</span>
+                <span className="text-[10px] sm:text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                  Built on AHA 2020 & AIIMS Guidelines
                 </span>
               </div>
 
-              {/* Bold Display Heading (Clean, no dated highlighter) */}
-              <h1 className="text-3xl sm:text-5xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.12]">
-                Protect Lives in the <span className="text-primary dark:text-emerald-400">Critical First 300 Seconds.</span>
+              {/* Bold Display Heading with Golden Yellow Highlighter Box */}
+              <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-black text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+                Protect Lives in the
+                <div className="mt-2">
+                  <span className="inline-block px-4 py-2 sm:px-6 sm:py-2 rounded-2xl sm:rounded-3xl bg-[#FED766] text-slate-900 shadow-xs">
+                    Critical First 300<br />Seconds.
+                  </span>
+                </div>
               </h1>
 
               {/* 2-Line Plain-Language Subhead */}
-              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl font-normal">
-                When someone collapses, ambulances take 15–20 minutes. RakshaSaathi gives anyone with a phone the step-by-step guidance to keep them alive until paramedics arrive.
+              <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed max-w-xl font-normal">
+                When someone collapses, sirens are 15 minutes away in traffic. RakshaSaathi turns helpless panic into calm, life-saving instincts with instant AI triage, 110 BPM guided CPR, cheap generic medicine savings, and zero-download crowd dispatch.
               </p>
 
-              {/* 2 Distinct CTAs (Primary 48px + Secondary Outline) */}
+              {/* 2 Distinct CTAs */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-1">
                 <button
                   onClick={() => onSelectDestination('chat')}
-                  className="h-12 px-7 sm:px-8 rounded-full bg-primary hover:bg-primary-dark text-white font-bold text-sm sm:text-base shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer flex items-center justify-center space-x-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2"
+                  className="h-12 px-7 rounded-full bg-[#0E5A50] hover:bg-[#0a443c] text-white font-bold text-sm sm:text-base shadow-sm hover:shadow-md flex items-center justify-center space-x-2 transition-all cursor-pointer"
                 >
-                  <Zap className="w-4.5 h-4.5 text-accent" />
+                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
                   <span>Launch AI Guardian</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  <span>&rarr;</span>
                 </button>
 
                 <button
                   onClick={() => onSelectDestination('camera')}
-                  className="h-12 px-6 sm:px-7 rounded-full border border-slate-300 dark:border-border bg-white dark:bg-surface text-slate-800 dark:text-white font-bold text-sm sm:text-base hover:bg-slate-50 dark:hover:bg-slate-800/50 shadow-2xs transition-all duration-200 cursor-pointer flex items-center justify-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="h-12 px-7 rounded-full bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white font-bold text-sm sm:text-base hover:bg-slate-50 dark:hover:bg-slate-700/50 shadow-xs flex items-center justify-center space-x-2 transition-all cursor-pointer"
                 >
-                  <Camera className="w-4.5 h-4.5 text-primary dark:text-emerald-400" />
+                  <Camera className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                   <span>Open AI Medical Camera</span>
                 </button>
               </div>
 
-              {/* School Credit Line */}
-              <div className="pt-1 flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
-                <ShieldCheck className="w-4 h-4 text-primary dark:text-emerald-400 shrink-0" />
-                <span className="leading-snug">
-                  Created at Seth M.R. Jaipuria School, Lucknow · T4 Education Top 10 Community Collaboration
+              {/* School Credit Line with 3 circular avatars S J K */}
+              <div className="pt-2 flex items-center space-x-2.5 text-xs text-slate-700 dark:text-slate-300">
+                <div className="flex -space-x-1 items-center shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-[#0E5A50] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">S</span>
+                  <span className="w-5 h-5 rounded-full bg-[#F59E0B] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">J</span>
+                  <span className="w-5 h-5 rounded-full bg-[#10B981] text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-slate-900">K</span>
+                </div>
+                <span className="leading-snug font-medium">
+                  Built for students, teachers &amp; families across India • Seth M.R. Jaipuria School
                 </span>
               </div>
 
             </div>
 
-            {/* Right Column: Rapid Response Cockpit (Clean High-Fidelity App Preview Card) */}
+            {/* Right Column: Rapid Response Cockpit */}
             <div className="lg:col-span-5">
-              <div className="rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-border p-5 sm:p-6 space-y-4 shadow-2xs">
+              <div className="rounded-3xl bg-white dark:bg-[#12221e] border border-slate-200/80 dark:border-white/10 p-5 sm:p-6 space-y-4 shadow-xl">
                 
                 {/* Cockpit Card Header */}
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-border/70 pb-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-3">
                   <div className="flex items-center space-x-2.5">
-                    <div className="p-2 rounded-xl bg-primary/10 text-primary dark:text-emerald-400">
+                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-[#0E5A50] dark:text-emerald-400">
                       <HeartPulse className="w-4.5 h-4.5" />
                     </div>
                     <div>
@@ -181,47 +191,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       </span>
                     </div>
                   </div>
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/20">
+                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-[#E8F5E9] dark:bg-emerald-950/60 text-[#1B5E20] dark:text-emerald-300 text-[10px] font-bold border border-emerald-200/60 dark:border-emerald-800/40">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block" />
                     <span>PWA READY</span>
                   </span>
-                </div>
-
-                {/* Subtle ECG Heartbeat Pulse SVG Wave */}
-                <div className="h-6 w-full overflow-hidden flex items-center px-1 text-primary/70 dark:text-emerald-400/80">
-                  <svg className="w-full h-5" viewBox="0 0 320 20" fill="none" preserveAspectRatio="none">
-                    <path
-                      d="M0 10 L50 10 L60 4 L70 16 L80 10 L140 10 L150 2 L160 18 L170 10 L240 10 L250 5 L260 15 L270 10 L320 10"
-                      stroke="currentColor"
-                      strokeWidth="1.75"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="animate-ecg-pulse"
-                    />
-                  </svg>
                 </div>
 
                 {/* 2×2 Grid of Key Actions */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => onStartRespond('unconscious')}
-                    className="p-3.5 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-border hover:border-primary/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-[#0E5A50]/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
-                      <HeartPulse className="w-4 h-4 text-primary dark:text-emerald-400" />
-                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary dark:text-emerald-400">110 BPM</span>
+                      <HeartPulse className="w-4 h-4 text-[#0E5A50] dark:text-emerald-400" />
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-[#0E5A50] dark:text-emerald-400">110 BPM</span>
                     </div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-primary dark:group-hover:text-emerald-400 transition-colors">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#0E5A50] dark:group-hover:text-emerald-400 transition-colors">
                       Adult CPR Guide
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      Audio metronome + reticle
+                      Audio metronome + sternum reticle
                     </p>
                   </button>
 
                   <button
                     onClick={() => onSelectDestination('camera')}
-                    className="p-3.5 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-border hover:border-primary/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-sky-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
                       <Camera className="w-4 h-4 text-sky-600 dark:text-sky-400" />
@@ -237,7 +233,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <button
                     onClick={() => onSelectDestination('medicines')}
-                    className="p-3.5 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-border hover:border-primary/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-amber-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
                       <Pill className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -247,13 +243,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       Jan Aushadhi Meds
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      Exact generic salt matches
+                      Exact generic salt substitutes
                     </p>
                   </button>
 
                   <button
                     onClick={() => onSelectDestination('handoff')}
-                    className="p-3.5 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-border hover:border-primary/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
+                    className="p-3.5 rounded-2xl bg-white dark:bg-surface border border-slate-200/80 dark:border-border hover:border-indigo-500/50 text-left transition-all duration-200 cursor-pointer group space-y-1 shadow-2xs hover:-translate-y-0.5"
                   >
                     <div className="flex items-center justify-between">
                       <QrCode className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -268,19 +264,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </button>
                 </div>
 
-                {/* Full-Width Red Action Button at Bottom */}
-                {onOpenCrowdModal && (
-                  <button
-                    onClick={onOpenCrowdModal}
-                    className="w-full py-3 px-4 rounded-xl bg-alert hover:bg-red-700 text-white text-xs font-bold flex items-center justify-between shadow-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-alert/40"
-                  >
-                    <span className="flex items-center space-x-2">
-                      <Users className="w-4 h-4" />
-                      <span>Deploy Bystander Crowd Squad</span>
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
+                {/* Full-Width Dark Teal Action Button at Bottom */}
+                <button
+                  onClick={onOpenCrowdModal || (() => onStartRespond('unconscious'))}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-[#0E5A50] hover:bg-[#0a443c] text-white text-xs sm:text-sm font-bold flex items-center justify-between shadow-xs transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0E5A50]/40"
+                >
+                  <span className="flex items-center space-x-2">
+                    <Users className="w-4 h-4" />
+                    <span>Deploy Bystander Crowd Squad QR</span>
+                  </span>
+                  <span>&rarr;</span>
+                </button>
 
               </div>
             </div>
