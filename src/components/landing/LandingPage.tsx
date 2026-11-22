@@ -1062,28 +1062,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </footer>
 
       {/* ======================================================== */}
-      {/* 13. MOBILE STICKY ACTION BAR (Past Hero, < 768px)        */}
+      {/* 13. BOTTOM PADDING FOR FLOATING PROMPT BAR               */}
       {/* ======================================================== */}
-      {showMobileStickyBar && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 p-2.5 bg-white/95 dark:bg-surface/95 backdrop-blur-md border-t border-slate-200 dark:border-border flex items-center gap-2 md:hidden shadow-lg animate-in slide-in-from-bottom-2 duration-200">
-          <button
-            onClick={() => onSelectDestination('chat')}
-            className="flex-1 h-11 px-4 rounded-full bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer"
-          >
-            <Zap className="w-4 h-4 text-accent" />
-            <span>Launch AI Guardian</span>
-          </button>
-          
-          <button
-            onClick={() => onStartRespond('unconscious')}
-            className="h-11 px-4 rounded-full bg-alert hover:bg-red-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-xs cursor-pointer shrink-0"
-            title="Emergency SOS 112"
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>112 SOS</span>
-          </button>
-        </div>
-      )}
+      <div className="h-16 sm:h-20" aria-hidden="true" />
 
     </div>
   );
