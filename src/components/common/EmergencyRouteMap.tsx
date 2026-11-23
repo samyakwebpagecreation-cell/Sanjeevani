@@ -88,19 +88,22 @@ export const EmergencyRouteMap: React.FC<EmergencyRouteMapProps> = ({
 
       const hospitalMarker = L.marker([route.destination.lat, route.destination.lng], { icon: hospitalIcon })
         .addTo(map)
-        .bindPopup(`<b>${facility.name}</b><br/>${facility.address}<br/><b>${route.durationText}</b>`);
+        .bindPopup(`<b>${facility.name}</b><br/>${facility.address}<br/><b>Road Distance: ${route.distanceText}</b>`);
 
-      // Add route polyline
-      const latlngs: [number, number][] = [
-        [route.origin.lat, route.origin.lng],
-        [route.destination.lat, route.destination.lng]
-      ];
+      // Add route polyline - prioritize real road geometry coordinates if available
+      const latlngs: [number, number][] = (route.coordinates && route.coordinates.length > 1)
+        ? route.coordinates
+        : [
+            [route.origin.lat, route.origin.lng],
+            [route.destination.lat, route.destination.lng]
+          ];
 
       const polyline = L.polyline(latlngs, {
         color: '#2A7B62',
-        weight: 4,
-        dashArray: '8, 8',
-        opacity: 0.85
+        weight: 5,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
 
       // Fit bounds with padding and realistic urban maxZoom
@@ -139,20 +142,15 @@ export const EmergencyRouteMap: React.FC<EmergencyRouteMapProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-primary">
-                Live Driving Route
+                Live Road Navigation
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                route.trafficCondition === 'Moderate' 
-                  ? 'bg-amber-100 text-amber-800' 
-                  : 'bg-emerald-100 text-emerald-800'
-              }`}>
-                ● {route.trafficCondition} Traffic
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                ● Turn-by-Turn Road Route
               </span>
             </div>
             <div className="flex items-center space-x-2 text-xs sm:text-sm font-extrabold text-ink">
-              <span>{route.durationText}</span>
-              <span>•</span>
-              <span className="text-primary">{route.distanceText}</span>
+              <span className="text-primary">Road Distance: {route.distanceText}</span>
+              <span className="text-ink-muted text-[11px] font-normal">({route.distanceText} away)</span>
             </div>
           </div>
         </div>
@@ -195,7 +193,7 @@ export const EmergencyRouteMap: React.FC<EmergencyRouteMapProps> = ({
                 {facility.name}
               </span>
               <span className="font-extrabold text-primary shrink-0">
-                {route.durationText} ({route.distanceText})
+                Road Distance: {route.distanceText}
               </span>
             </div>
           </div>
@@ -204,7 +202,7 @@ export const EmergencyRouteMap: React.FC<EmergencyRouteMapProps> = ({
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             <div className="text-[11px] font-bold text-ink-muted uppercase tracking-wider flex items-center space-x-1 pb-1 border-b border-border">
               <Compass className="w-3.5 h-3.5 text-primary" />
-              <span>Turn-by-Turn Navigation Steps</span>
+              <span>Turn-by-Turn Road Guidance</span>
             </div>
 
             {route.steps.map((step, idx) => (
@@ -218,9 +216,8 @@ export const EmergencyRouteMap: React.FC<EmergencyRouteMapProps> = ({
                 <div className="flex-1 space-y-0.5">
                   <p className="font-semibold text-ink leading-snug">{step.instruction}</p>
                   <div className="flex items-center space-x-2 text-[10px] text-ink-muted font-medium">
-                    <span>{step.distance}</span>
-                    <span>•</span>
-                    <span>{step.duration}</span>
+                    <span className="font-bold text-primary">{step.distance}</span>
+                    {step.duration && <span>• {step.duration}</span>}
                   </div>
                 </div>
               </div>

@@ -30,18 +30,19 @@ export interface EmergencyFacility {
 export interface RouteStep {
   instruction: string;
   distance: string;
-  duration: string;
+  duration?: string;
 }
 
 export interface RouteComputationResult {
   distanceMeters: number;
   distanceText: string;
-  durationSeconds: number;
-  durationText: string;
+  durationSeconds?: number;
+  durationText?: string;
   polylineEncoded?: string;
+  coordinates?: [number, number][];
   destinationName: string;
   navigationUrl: string;
-  trafficCondition: 'Smooth / Low' | 'Moderate' | 'Heavy Congestion';
+  trafficCondition?: 'Smooth / Low' | 'Moderate' | 'Heavy Congestion';
   steps: RouteStep[];
   origin: { lat: number; lng: number };
   destination: { lat: number; lng: number };
@@ -1272,8 +1273,50 @@ export function setUserPreciseLocation(info: Partial<UserLocationInfo> & { lat: 
 }
 
 /**
- * Clear manual location override and force re-detection
+ * Real-time GPS Location Watcher
+ * Watches navigator.geolocation and calls onPosition with live coordinates,
+ * updating cached location and dispatching live update events.
  */
+export function watchUserLivePosition(
+  onPosition: (coords: { lat: number; lng: number }) => void,
+  onError?: (err: GeolocationPositionError) => void
+): () => void {
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    return () => {};
+  }
+
+  const watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      if (cachedLocationInfo) {
+        cachedLocationInfo.lat = lat;
+        cachedLocationInfo.lng = lng;
+        cachedLocationInfo.source = 'gps';
+      }
+      onPosition({ lat, lng });
+      try {
+        window.dispatchEvent(new CustomEvent('sanjeevani_live_coords_updated', {
+          detail: { lat, lng }
+        }));
+      } catch (e) {
+        // ignore
+      }
+    },
+    (err) => {
+      if (onError) onError(err);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 15000
+    }
+  );
+
+  return () => {
+    navigator.geolocation.clearWatch(watchId);
+  };
+}
 export function clearManualLocation(): void {
   cachedLocationInfo = null;
   try {
@@ -1537,34 +1580,133 @@ export async function fetchNearbyEmergencyFacilities(
 }
 
 /**
- * Compute Driving Route & ETA
- * First tries Google Routes API -> then OSRM open routing -> then geometric fallback.
+ * Helper to cleanly format road distance into meters or kilometers
+ */
+export function formatRoadDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)} m`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
+/**
+ * Decodes Google Encoded Polyline algorithm into [lat, lng] array
+ */
+export function decodePolyline(encoded: string, precision: number = 5): [number, number][] {
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates: [number, number][] = [];
+  const factor = Math.pow(10, precision);
+
+  while (index < encoded.length) {
+    let byte: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const latitude_change = (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const longitude_change = (result & 1) ? ~(result >> 1) : (result >> 1);
+
+    lat += latitude_change;
+    lng += longitude_change;
+    coordinates.push([lat / factor, lng / factor]);
+  }
+
+  return coordinates;
+}
+
+/**
+ * Compute Driving Road Route & Distance
+ * First tries OSRM open road routing with detailed geometries and maneuvers -> then Google Routes API -> then realistic road network fallback.
  */
 export async function computeEmergencyRoute(
   origin: { lat: number; lng: number },
   destination: { lat: number; lng: number },
   destinationName: string = 'Emergency Trauma Center'
 ): Promise<RouteComputationResult> {
-  const dKm = calculateDistanceKm(origin.lat, origin.lng, destination.lat, destination.lng);
+  const dStraightKm = calculateDistanceKm(origin.lat, origin.lng, destination.lat, destination.lng);
+  // Urban road distance is typically 1.35x - 1.45x straight line distance
+  const estimatedRoadMeters = Math.round(dStraightKm * 1400);
+
   const defaultSteps: RouteStep[] = [
     {
       instruction: 'Exit current location and merge onto nearest primary road',
-      distance: `${Math.max(150, Math.round(dKm * 150))} m`,
-      duration: '1 min'
+      distance: formatRoadDistance(Math.max(150, Math.round(estimatedRoadMeters * 0.15)))
     },
     {
       instruction: `Follow main arterial transit corridor towards ${destinationName}`,
-      distance: `${Math.max(0.5, dKm * 0.75).toFixed(1)} km`,
-      duration: `${Math.max(2, Math.round(dKm * 1.8))} mins`
+      distance: formatRoadDistance(Math.max(500, Math.round(estimatedRoadMeters * 0.75)))
     },
     {
       instruction: `Arrive at Emergency Admissions & Trauma Bay at ${destinationName}`,
-      distance: '200 m',
-      duration: '1 min'
+      distance: '200 m'
     }
   ];
 
-  // Tier 1: Try Google Routes API with mapsApiKey
+  // Tier 1: Try OSRM (Open Source Routing Machine) for exact driving road distance and coordinates
+  try {
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true`;
+    const osrmRes = await fetch(osrmUrl, { signal: AbortSignal.timeout(4000) });
+    if (osrmRes.ok) {
+      const osrmData = await osrmRes.json();
+      const osrmRoute = osrmData.routes?.[0];
+      if (osrmRoute && typeof osrmRoute.distance === 'number') {
+        const roadMeters = Math.round(osrmRoute.distance);
+        const geoCoords = osrmRoute.geometry?.coordinates;
+        // GeoJSON coordinates are [lng, lat], Leaflet polyline expects [lat, lng]
+        const latLngCoords: [number, number][] = Array.isArray(geoCoords)
+          ? geoCoords.map((coord: [number, number]) => [coord[1], coord[0]])
+          : [[origin.lat, origin.lng], [destination.lat, destination.lng]];
+
+        // Extract turn-by-turn steps from OSRM legs if available
+        let extractedSteps: RouteStep[] = defaultSteps;
+        const osrmLegSteps = osrmRoute.legs?.[0]?.steps;
+        if (Array.isArray(osrmLegSteps) && osrmLegSteps.length > 0) {
+          extractedSteps = osrmLegSteps.slice(0, 10).map((step: any) => {
+            const maneuverType = step.maneuver?.type || 'proceed';
+            const modifier = step.maneuver?.modifier ? ` ${step.maneuver.modifier}` : '';
+            const name = step.name ? ` onto ${step.name}` : '';
+            let instruction = `${maneuverType}${modifier}${name}`;
+            if (maneuverType === 'depart') instruction = 'Head out and depart onto road';
+            if (maneuverType === 'arrive') instruction = `Arrive at ${destinationName}`;
+            instruction = instruction.charAt(0).toUpperCase() + instruction.slice(1);
+            return {
+              instruction,
+              distance: formatRoadDistance(step.distance || 0)
+            };
+          });
+        }
+
+        return {
+          distanceMeters: roadMeters,
+          distanceText: formatRoadDistance(roadMeters),
+          coordinates: latLngCoords,
+          destinationName,
+          navigationUrl: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving&dir_action=navigate`,
+          trafficCondition: 'Smooth / Low',
+          steps: extractedSteps,
+          origin,
+          destination
+        };
+      }
+    }
+  } catch (osrmErr) {
+    console.warn('OSRM road route compute warning, checking Google Routes:', osrmErr);
+  }
+
+  // Tier 2: Try Google Routes API with mapsApiKey
   if (AI_CONFIG.mapsApiKey && AI_CONFIG.mapsApiKey.startsWith('AIzaSy')) {
     try {
       const endpoint = 'https://routes.googleapis.com/directions/v2:computeRoutes';
@@ -1591,20 +1733,18 @@ export async function computeEmergencyRoute(
         const data = await response.json();
         const route = data.routes?.[0];
         if (route) {
-          const meters = route.distanceMeters || Math.round(dKm * 1000);
-          const durSeconds = parseInt(route.duration?.replace('s', '') || '360', 10);
-          const km = (meters / 1000).toFixed(1);
-          const mins = Math.max(1, Math.round(durSeconds / 60));
+          const meters = route.distanceMeters || estimatedRoadMeters;
+          const encodedPoly = route.polyline?.encodedPolyline;
+          const decoded = encodedPoly ? decodePolyline(encodedPoly) : undefined;
 
           return {
             distanceMeters: meters,
-            distanceText: `${km} km`,
-            durationSeconds: durSeconds,
-            durationText: `${mins} min ETA`,
-            polylineEncoded: route.polyline?.encodedPolyline,
+            distanceText: formatRoadDistance(meters),
+            polylineEncoded: encodedPoly,
+            coordinates: decoded,
             destinationName,
             navigationUrl: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving&dir_action=navigate`,
-            trafficCondition: durSeconds > (meters / 10) ? 'Moderate' : 'Smooth / Low',
+            trafficCondition: 'Smooth / Low',
             steps: defaultSteps,
             origin,
             destination
@@ -1612,49 +1752,14 @@ export async function computeEmergencyRoute(
         }
       }
     } catch (googleRoutesErr) {
-      console.warn('Google Routes API compute error, falling back to OSRM:', googleRoutesErr);
+      console.warn('Google Routes API compute error, falling back to road network estimate:', googleRoutesErr);
     }
   }
 
-  // Tier 2: Open Source Routing Machine (OSRM)
-  try {
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=false`;
-    const osrmRes = await fetch(osrmUrl, { signal: AbortSignal.timeout(3000) });
-    if (osrmRes.ok) {
-      const osrmData = await osrmRes.json();
-      const osrmRoute = osrmData.routes?.[0];
-      if (osrmRoute) {
-        const meters = Math.round(osrmRoute.distance);
-        const durSecs = Math.round(osrmRoute.duration);
-        const km = (meters / 1000).toFixed(1);
-        const mins = Math.max(1, Math.round(durSecs / 60));
-
-        return {
-          distanceMeters: meters,
-          distanceText: `${km} km`,
-          durationSeconds: durSecs,
-          durationText: `${mins} min ETA`,
-          destinationName,
-          navigationUrl: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving&dir_action=navigate`,
-          trafficCondition: 'Smooth / Low',
-          steps: defaultSteps,
-          origin,
-          destination
-        };
-      }
-    }
-  } catch (osrmErr) {
-    // continue to geometric fallback
-  }
-
-  // Tier 3: Geometric fallback (realistic urban driving estimation)
-  const estMinutes = Math.max(2, Math.round(dKm * 2.2));
-
+  // Tier 3: Realistic Road Network Fallback (accounts for urban street grid winding factor)
   return {
-    distanceMeters: Math.round(dKm * 1000),
-    distanceText: `${dKm.toFixed(1)} km`,
-    durationSeconds: estMinutes * 60,
-    durationText: `${estMinutes} min ETA`,
+    distanceMeters: estimatedRoadMeters,
+    distanceText: formatRoadDistance(estimatedRoadMeters),
     destinationName,
     navigationUrl: `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&travelmode=driving&dir_action=navigate`,
     trafficCondition: 'Smooth / Low',

@@ -376,7 +376,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         facilityData ? {
           name: facilityData.name,
           distance: routeData ? routeData.distanceText : `${facilityData.distanceKm || 2} km`,
-          eta: routeData ? routeData.durationText : `${facilityData.etaMinutes || 8} mins`,
+          eta: routeData?.durationText || `${facilityData.etaMinutes || 8} mins`,
           phone: facilityData.phoneNumber || '112'
         } : undefined
       );

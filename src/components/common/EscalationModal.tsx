@@ -6,7 +6,14 @@ import {
   ShieldAlert, 
   X
 } from 'lucide-react';
-import { getAutomaticEscalationDispatch, EmergencyFacility, RouteComputationResult } from '../../services/placesRoutesService';
+import { 
+  getAutomaticEscalationDispatch, 
+  computeEmergencyRoute, 
+  watchUserLivePosition, 
+  EmergencyFacility, 
+  RouteComputationResult,
+  calculateDistanceKm
+} from '../../services/placesRoutesService';
 import { EmergencyRouteMap } from './EmergencyRouteMap';
 
 interface EscalationModalProps {
@@ -28,11 +35,48 @@ export const EscalationModal: React.FC<EscalationModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    // Fetch initial nearest facility and road route
     getAutomaticEscalationDispatch()
       .then(({ nearestHospital, route }) => {
         setHospitalInfo({ facility: nearestHospital, route });
       })
       .catch((err) => console.warn('Escalation dispatch lookup error:', err));
+
+    // Live Geolocation Watcher for turn-by-turn road distance updates
+    let lastCoord: { lat: number; lng: number } | null = null;
+    let isUpdating = false;
+
+    const stopWatching = watchUserLivePosition(async (newCoords) => {
+      // Re-calculate when movement > 20 meters to prevent unnecessary thrashing
+      if (lastCoord) {
+        const movedKm = calculateDistanceKm(lastCoord.lat, lastCoord.lng, newCoords.lat, newCoords.lng);
+        if (movedKm < 0.02) return;
+      }
+      lastCoord = newCoords;
+
+      if (isUpdating) return;
+      isUpdating = true;
+
+      setHospitalInfo((prev) => {
+        if (!prev) return prev;
+        computeEmergencyRoute(newCoords, prev.facility.coordinates, prev.facility.name)
+          .then((updatedRoute) => {
+            setHospitalInfo({
+              facility: prev.facility,
+              route: updatedRoute
+            });
+          })
+          .catch((err) => console.warn('Live road distance update warning:', err))
+          .finally(() => {
+            isUpdating = false;
+          });
+        return prev;
+      });
+    });
+
+    return () => {
+      stopWatching();
+    };
   }, [isOpen]);
 
   // Allow closing with the Escape key
