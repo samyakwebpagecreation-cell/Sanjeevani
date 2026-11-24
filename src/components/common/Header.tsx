@@ -72,16 +72,16 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => onSelectDestination('home')}
             className="group flex items-center space-x-2 sm:space-x-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full transition-transform min-w-0 cursor-pointer"
-            aria-label="RakshaSaathi Home"
+            aria-label="रक्षा Sathi Home"
           >
             {/* Official Logo Emblem */}
             <div className="relative flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white/95 dark:bg-surface/90 border border-slate-200/80 dark:border-white/10 shadow-xs overflow-hidden transition-all group-hover:scale-105 p-1 shrink-0 backdrop-blur-md">
-              <img src="/sanjeevani-logo.png" alt="RakshaSaathi Logo" className="h-full w-full object-contain" />
+              <img src="/sanjeevani-logo.png" alt="रक्षा Sathi Logo" className="h-full w-full object-contain" />
             </div>
 
             <div className="flex flex-col min-w-0">
               <span className="font-display-italic text-base sm:text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none truncate">
-                RakshaSaathi
+                रक्षा Sathi
               </span>
               <span className="text-[7.5px] sm:text-[9px] font-black tracking-wider text-amber-800 dark:text-accent uppercase mt-0.5 truncate">
                 First-Aid Intelligence

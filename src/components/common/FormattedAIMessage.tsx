@@ -347,7 +347,28 @@ export const FormattedAIMessage: React.FC<FormattedAIMessageProps> = ({
   animate = false,
   onComplete
 }) => {
-  const blocks = useMemo(() => parseMedicalResponse(text), [text]);
+  const rawBlocks = parseMedicalResponse(text);
+  
+  // Per user requirement: In emergency guidance, ensure Do's & Don'ts (Immediate Priority & What NOT To Do)
+  // appear prominent at the top BEFORE detailed sub-steps so responders know immediately what to do and what to strictly avoid.
+  const topBlocks: ParsedBlock[] = [];
+  const middleBlocks: ParsedBlock[] = [];
+  const bottomBlocks: ParsedBlock[] = [];
+
+  rawBlocks.forEach((block) => {
+    if (block.type === 'intro' || block.type === 'immediate_action' || block.type === 'what_not_to_do') {
+      topBlocks.push(block);
+    } else if (block.type === 'call_112') {
+      bottomBlocks.push(block);
+    } else {
+      middleBlocks.push(block);
+    }
+  });
+
+  const blocks = useMemo(() => {
+    // If we have what_not_to_do, position it right alongside Immediate Action/Priority at the top
+    return [...topBlocks, ...middleBlocks, ...bottomBlocks];
+  }, [rawBlocks]);
 
   // Identify step blocks vs pre-step vs post-step blocks
   const stepBlocks = useMemo(() => blocks.filter(b => b.type === 'step'), [blocks]);
@@ -502,22 +523,22 @@ export const FormattedAIMessage: React.FC<FormattedAIMessageProps> = ({
           return (
             <div
               key={index}
-              className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/90 border-2 border-amber-500/80 text-[#451A03] dark:!text-amber-100 space-y-2.5 shadow-sm animate-in fade-in duration-300"
-              style={{ color: '#451A03' }}
+              className="p-4 sm:p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/80 border-2 border-emerald-500/80 text-[#064E3B] dark:!text-emerald-100 space-y-2.5 shadow-sm animate-in fade-in duration-300"
+              style={{ color: '#064E3B' }}
             >
-              <div className="flex items-center space-x-2 text-xs font-black text-amber-900 dark:!text-amber-300 uppercase tracking-wider">
-                <div className="p-1 rounded-lg bg-amber-500 text-white shadow-xs">
-                  <Zap className="w-4 h-4" fill="currentColor" />
+              <div className="flex items-center space-x-2 text-xs sm:text-sm font-black text-emerald-900 dark:!text-emerald-300 uppercase tracking-wider">
+                <div className="p-1 rounded-lg bg-emerald-600 text-white shadow-xs">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
-                <span className="font-extrabold tracking-wide">⚡ {block.title || 'Immediate Priority (First 10 Seconds)'}</span>
+                <span className="font-extrabold tracking-wide">✅ DO THIS FIRST • {block.title || 'IMMEDIATE PRIORITY'}</span>
               </div>
               <div 
-                className="text-sm sm:text-base font-bold text-[#451A03] dark:!text-amber-100 leading-relaxed pl-7"
-                style={{ color: '#451A03' }}
+                className="text-base sm:text-lg font-bold text-[#064E3B] dark:!text-emerald-100 leading-relaxed pl-7"
+                style={{ color: '#064E3B' }}
               >
                 {renderInlineMarkdown(visiblePriorityText)}
                 {animate && !isSkipped && revealedWords < words.length && (
-                  <span className="inline-block w-2 h-4 ml-1 bg-amber-600 animate-pulse align-middle" />
+                  <span className="inline-block w-2 h-4 ml-1 bg-emerald-600 animate-pulse align-middle" />
                 )}
               </div>
             </div>
@@ -537,12 +558,12 @@ export const FormattedAIMessage: React.FC<FormattedAIMessageProps> = ({
               className="flex items-start space-x-3.5 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#13221C] border-2 border-[#DCE3E1] dark:border-[#223830] text-[#0F172A] dark:!text-slate-100 shadow-xs transition-all animate-in fade-in slide-in-from-bottom-2 duration-300 hover:border-primary/50"
               style={{ color: '#0F172A' }}
             >
-              <span className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-white text-xs sm:text-sm font-black font-mono shadow-xs">
+              <span className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white text-sm sm:text-base font-black font-mono shadow-xs">
                 {block.stepNumber || currentStepRenderIndex}
               </span>
-              <div className="text-sm sm:text-base leading-relaxed space-y-1">
+              <div className="text-base sm:text-lg leading-relaxed space-y-1.5">
                 {block.title && (
-                  <span className="font-black text-[#0E5A50] dark:!text-emerald-400 mr-2 text-[14px] sm:text-[15px] block sm:inline" style={{ color: '#0E5A50' }}>
+                  <span className="font-black text-[#0E5A50] dark:!text-emerald-400 mr-2 text-[15px] sm:text-[17px] block sm:inline" style={{ color: '#0E5A50' }}>
                     {renderInlineMarkdown(block.title)}:
                   </span>
                 )}
@@ -564,24 +585,24 @@ export const FormattedAIMessage: React.FC<FormattedAIMessageProps> = ({
           return (
             <div
               key={index}
-              className="p-4 sm:p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border-2 border-rose-500/40 text-[#881337] dark:!text-rose-100 space-y-2.5 shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-400"
+              className="p-4 sm:p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border-2 border-rose-500/50 text-[#881337] dark:!text-rose-100 space-y-2.5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-400"
               style={{ color: '#881337' }}
             >
-              <div className="flex items-center space-x-2 text-rose-700 dark:text-rose-300 text-xs font-black uppercase tracking-wider">
-                <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span>⚠️ {block.title || 'What NOT to Do (Critical Contraindications)'}</span>
+              <div className="flex items-center space-x-2 text-rose-700 dark:text-rose-300 text-xs sm:text-sm font-black uppercase tracking-wider">
+                <ShieldAlert className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span>🚫 {block.title || "WHAT NOT TO DO • CRITICAL CONTRAINDICATIONS"}</span>
               </div>
               {block.content && (
-                <p className="text-sm leading-relaxed text-[#4C0519] dark:!text-rose-100 font-bold pl-6" style={{ color: '#4C0519' }}>
+                <p className="text-sm sm:text-base leading-relaxed text-[#4C0519] dark:!text-rose-100 font-bold pl-6" style={{ color: '#4C0519' }}>
                   {renderInlineMarkdown(block.content)}
                 </p>
               )}
               {block.bullets && block.bullets.length > 0 && (
-                <ul className="space-y-2 pl-6 text-xs sm:text-sm text-[#4C0519] dark:!text-rose-100" style={{ color: '#4C0519' }}>
+                <ul className="space-y-2 pl-6 text-xs sm:text-sm text-[#4C0519] dark:!text-rose-100 font-bold" style={{ color: '#4C0519' }}>
                   {block.bullets.map((b, bIdx) => (
                     <li key={bIdx} className="flex items-start space-x-2">
-                      <span className="text-rose-600 font-extrabold text-base leading-none">•</span>
-                      <span className="font-semibold">{renderInlineMarkdown(b)}</span>
+                      <span className="text-rose-600 font-extrabold text-base leading-none">✖</span>
+                      <span className="font-bold">{renderInlineMarkdown(b)}</span>
                     </li>
                   ))}
                 </ul>

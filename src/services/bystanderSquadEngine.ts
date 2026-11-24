@@ -456,7 +456,7 @@ export function createBystanderSquadSession(
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const origin = (typeof window !== 'undefined' && host !== 'localhost' && host !== '127.0.0.1')
     ? window.location.origin
-    : 'https://sanjeevani-v2.web.app';
+    : 'https://rakshasaathi.web.app';
   const joinUrl = `${origin}/?squad=${sessionId}&cat=${encodeURIComponent(category)}&title=${encodeURIComponent(category.replace('_', ' ').toUpperCase())}&addr=${encodeURIComponent(address)}`;
 
   // Generate crisp vector SVG QR Code
@@ -692,7 +692,7 @@ Return ONLY a valid JSON object matching this schema without markdown or formatt
   const host = typeof window !== 'undefined' ? window.location.hostname : '';
   const origin = (typeof window !== 'undefined' && host !== 'localhost' && host !== '127.0.0.1')
     ? window.location.origin
-    : 'https://sanjeevani-v2.web.app';
+    : 'https://rakshasaathi.web.app';
   const joinUrl = `${origin}/?squad=${sessionId}&cat=${encodeURIComponent(detectedCategory)}&title=${encodeURIComponent(detectedCategory.replace('_', ' ').toUpperCase())}&addr=${encodeURIComponent(addressPrompt)}`;
   const qrSvg = generateQRCodeSVG(joinUrl, 220, '#0E5A50', '#FFFFFF');
 

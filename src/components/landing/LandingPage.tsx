@@ -68,8 +68,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const faqs = [
     {
-      q: "Does RakshaSaathi work without internet in school basements or remote roads?",
-      a: "Yes, 100%. RakshaSaathi is architected as an offline-first Progressive Web App (PWA). All 12 accredited clinical protocols, the 110 BPM audio metronome synthesizer, and the paramedic SBAR docket run locally in your browser memory without cell towers or Wi-Fi."
+      q: "Does रक्षा Sathi work without internet in school basements or remote roads?",
+      a: "Yes, 100%. रक्षा Sathi is architected as an offline-first Progressive Web App (PWA). All 12 accredited clinical protocols, the 110 BPM audio metronome synthesizer, and the paramedic SBAR docket run locally in your browser memory without cell towers or Wi-Fi."
     },
     {
       q: "How does the AI Medical Camera guide CPR hand placement?",
@@ -81,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       q: "Do crowd bystanders need to install an app to join the rescue squad?",
-      a: "Zero app download and zero signup required. RakshaSaathi generates a high-density vector QR code locally. Any passerby points their normal phone camera at the screen and is instantly assigned a coordinated mission: dialing 112, clearing traffic, or fetching clean cloth."
+      a: "Zero app download and zero signup required. रक्षा Sathi generates a high-density vector QR code locally. Any passerby points their normal phone camera at the screen and is instantly assigned a coordinated mission: dialing 112, clearing traffic, or fetching clean cloth."
     }
   ];
 
@@ -138,7 +138,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {/* 2-Line Plain-Language Subhead */}
               <p className="hero-body-text text-sm sm:text-base text-slate-900 font-medium leading-relaxed max-w-xl">
-                When someone collapses, sirens are 15 minutes away in traffic. RakshaSaathi turns helpless panic into calm, life-saving instincts with instant AI triage, 110 BPM guided CPR, cheap generic medicine savings, and zero-download crowd dispatch.
+                When someone collapses, sirens are 15 minutes away in traffic. रक्षा Sathi turns helpless panic into calm, life-saving instincts with instant AI triage, 110 BPM guided CPR, cheap generic medicine savings, and zero-download crowd dispatch.
               </p>
 
               {/* 2 Distinct CTAs */}
@@ -386,13 +386,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="rounded-2xl bg-white dark:bg-surface border border-slate-200 dark:border-border border-l-4 border-l-primary p-6 sm:p-8 shadow-xs space-y-3">
           <div className="inline-flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-primary dark:text-emerald-400">
             <Mountain className="w-4 h-4" />
-            <span>THE PURPOSE OF RAKSHASAATHI</span>
+            <span>THE PURPOSE OF रक्षा SATHI</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             Lifting the Mountain of Medical Panic
           </h2>
           <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
-            "In the Ramayana, Hanuman could not identify which herb would save Lakshmana, so he lifted the entire Mount Dronagiri. RakshaSaathi lifts the mountain of medical panic off your shoulders — turning complex clinical protocols into simple, 1-2-3 actions anyone can execute."
+            "In the Ramayana, Hanuman could not identify which herb would save Lakshmana, so he lifted the entire Mount Dronagiri. रक्षा Sathi lifts the mountain of medical panic off your shoulders — turning complex clinical protocols into simple, 1-2-3 actions anyone can execute."
           </p>
         </div>
       </section>
@@ -963,7 +963,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </h2>
           
           <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto leading-relaxed font-normal">
-            Open RakshaSaathi instantly on any smartphone, tablet, or laptop. 100% free, 100% offline-resilient.
+            Open रक्षा Sathi instantly on any smartphone, tablet, or laptop. 100% free, 100% offline-resilient.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5 max-w-md sm:max-w-none mx-auto">
@@ -997,7 +997,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Col 1: Brand & Attribution */}
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <span className="text-lg font-extrabold text-slate-900 dark:text-white">RakshaSaathi</span>
+              <span className="text-lg font-extrabold text-slate-900 dark:text-white">रक्षा Sathi</span>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary dark:text-emerald-400">v2.0</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
@@ -1052,7 +1052,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Bottom Legal & Disclaimer */}
         <div className="py-6 border-t border-slate-200 dark:border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left text-[11px] text-slate-500 dark:text-slate-400">
-          <span>© 2026 RakshaSaathi v2.0 • Seth M.R. Jaipuria School Innovation.</span>
+          <span>© 2026 रक्षा Sathi v2.0 • Seth M.R. Jaipuria School Innovation.</span>
           <span className="font-semibold text-slate-700 dark:text-slate-300">
             First-aid guidance only. In serious emergencies, always dial 112 immediately.
           </span>

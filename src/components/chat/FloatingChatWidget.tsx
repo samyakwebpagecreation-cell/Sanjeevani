@@ -13,6 +13,7 @@ import {
   MicOff,
   Copy,
   Check,
+  CheckCircle2,
   Search,
   Pill,
   ShieldAlert,
@@ -371,58 +372,68 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
               </p>
             </div>
 
-            {/* 1. EMERGENCY 1-2-3 STEPS BLOCK */}
+            {/* 1. EMERGENCY PROTOCOL BLOCK: DO'S & DON'TS FIRST WITH LARGER FONT */}
             {result.emergencySteps && result.emergencySteps.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                    <HeartPulse className="w-4 h-4 text-red-500 animate-pulse" />
-                    Immediate 1-2-3 Action Protocol
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                    <HeartPulse className="w-4.5 h-4.5 text-red-500 animate-pulse" />
+                    Immediate Emergency Protocol
                   </span>
                   <a
                     href="tel:112"
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-xs transition-transform active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-black shadow-xs transition-transform active:scale-95"
                   >
-                    <PhoneCall className="w-3 h-3" />
+                    <PhoneCall className="w-3.5 h-3.5" />
                     <span>Dial 112 SOS</span>
                   </a>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  {result.emergencySteps.map((step) => (
-                    <div 
-                      key={step.stepNumber}
-                      className="p-3 rounded-2xl bg-slate-50 dark:bg-black/20 border border-slate-200/80 dark:border-white/5 flex items-start space-x-3"
-                    >
-                      <div className="w-7 h-7 rounded-xl bg-[#0E5A50] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                        {step.stepNumber}
-                      </div>
-                      <div className="space-y-0.5">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                          {step.title}
-                        </h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                          {step.instruction}
-                        </p>
-                      </div>
+                {/* Contraindications Warning (Don'ts) First */}
+                {result.contraindications && result.contraindications.length > 0 && (
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border-2 border-rose-500/50 text-[#881337] dark:!text-rose-100 space-y-2 shadow-xs">
+                    <div className="font-black flex items-center gap-2 text-rose-700 dark:text-rose-300 text-xs sm:text-sm uppercase tracking-wider">
+                      <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                      <span>🚫 WHAT NOT TO DO • STRICT CONTRAINDICATIONS</span>
                     </div>
-                  ))}
-                </div>
-
-                {/* Contraindications Warning */}
-                {result.contraindications && (
-                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1">
-                    <div className="font-black flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                      <span>CRITICAL CONTRAINDICATIONS (DO NOT DO)</span>
-                    </div>
-                    <ul className="list-disc pl-4 space-y-0.5 font-medium text-[11px]">
+                    <ul className="pl-6 space-y-1.5 text-xs sm:text-sm text-[#4C0519] dark:!text-rose-100 font-bold">
                       {result.contraindications.map((c, i) => (
-                        <li key={i}>{c}</li>
+                        <li key={i} className="flex items-start space-x-2">
+                          <span className="text-rose-600 font-extrabold text-sm leading-none">✖</span>
+                          <span>{c}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
                 )}
+
+                {/* 1-2-3 Action Steps (Do's) */}
+                <div className="space-y-2">
+                  <div className="text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>✅ WHAT TO DO (DO'S) • IMMEDIATE ACTION STEPS</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {result.emergencySteps.map((step) => (
+                      <div 
+                        key={step.stepNumber}
+                        className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#13221C] border-2 border-slate-200 dark:border-[#223830] flex items-start space-x-3.5 shadow-2xs"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 font-mono shadow-xs">
+                          {step.stepNumber}
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                            {step.title}
+                          </h4>
+                          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
+                            {step.instruction}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

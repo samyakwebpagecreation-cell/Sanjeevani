@@ -216,7 +216,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
   };
 
   const handleLoadDemoQR = (type: 'squad' | 'docket' | 'sos') => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sanjeevani-v2.web.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasaathi.web.app';
     if (type === 'squad') {
       handleProcessScannedQR(`${origin}/?squad=SQUAD-849201&cat=cardiac_cpr&title=CARDIAC%20ARREST&addr=City%20Center%20Metro%20Gate%203`);
     } else if (type === 'docket') {
@@ -1203,45 +1203,48 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
                         <span className="text-[11px] font-bold uppercase tracking-wider text-white/50 block">
                           Clinical Observation
                         </span>
-                        <p className="text-xs text-white/90 leading-relaxed font-medium">
+                        <p className="text-sm sm:text-base text-white font-medium leading-relaxed">
                           {injuryAnalysis.summary}
                         </p>
                       </div>
 
-                      {/* Itemized Action Steps */}
+                      {/* 1. CRITICAL CONTRAINDICATIONS (DON'TS) FIRST */}
+                      {injuryAnalysis.whatNotToDo && injuryAnalysis.whatNotToDo.length > 0 && (
+                        <div className="p-4 rounded-2xl bg-rose-500/15 border-2 border-rose-500/50 text-rose-100 space-y-2 shadow-sm animate-in fade-in duration-300">
+                          <div className="flex items-center space-x-2 font-black text-rose-300 text-sm sm:text-base uppercase tracking-wider">
+                            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-400" />
+                            <span>🚫 WHAT NOT TO DO • STRICT CONTRAINDICATIONS</span>
+                          </div>
+                          <ul className="space-y-1.5 pl-6 text-sm sm:text-base text-rose-100 font-bold">
+                            {injuryAnalysis.whatNotToDo.map((warn, idx) => (
+                              <li key={idx} className="flex items-start space-x-2">
+                                <span className="text-rose-400 font-extrabold text-base leading-none">✖</span>
+                                <span>{warn}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 2. IMMEDIATE ACTION STEPS (DO'S) */}
                       {injuryAnalysis.actionSteps && injuryAnalysis.actionSteps.length > 0 && (
-                        <div className="p-4 rounded-2xl bg-primary/10 border border-primary/30 space-y-2.5">
-                          <span className="text-xs font-bold text-primary flex items-center space-x-1.5">
-                            <Zap className="w-3.5 h-3.5 text-accent" />
-                            <span>Immediate Action Steps</span>
+                        <div className="p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/50 text-emerald-100 space-y-3 shadow-sm animate-in fade-in duration-300">
+                          <span className="text-sm sm:text-base font-black text-emerald-300 uppercase tracking-wider flex items-center space-x-2">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                            <span>✅ WHAT TO DO (DO'S) • IMMEDIATE ACTION</span>
                           </span>
-                          <div className="space-y-2">
+                          <div className="space-y-2.5">
                             {injuryAnalysis.actionSteps.map((step, idx) => (
-                              <div key={idx} className="flex items-start space-x-2.5 p-2 rounded-xl bg-black/40 border border-white/5">
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/30 text-accent flex items-center justify-center font-bold text-xs">
+                              <div key={idx} className="flex items-start space-x-3 p-3 rounded-xl bg-black/50 border border-white/10">
+                                <span className="flex-shrink-0 w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm font-mono shadow-xs">
                                   {idx + 1}
                                 </span>
-                                <p className="text-xs text-white/90 leading-relaxed font-medium">
+                                <p className="text-sm sm:text-base text-white leading-relaxed font-semibold">
                                   {step}
                                 </p>
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
-
-                      {/* Critical Contraindications */}
-                      {injuryAnalysis.whatNotToDo && injuryAnalysis.whatNotToDo.length > 0 && (
-                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-400/20 text-amber-200 text-xs space-y-1.5">
-                          <div className="flex items-center space-x-1.5 font-bold text-amber-300">
-                            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-                            <span>What NOT To Do (Avoid Harm):</span>
-                          </div>
-                          <ul className="space-y-1 pl-5 list-disc text-amber-100/90 text-[11px]">
-                            {injuryAnalysis.whatNotToDo.map((warn, idx) => (
-                              <li key={idx}>{warn}</li>
-                            ))}
-                          </ul>
                         </div>
                       )}
 

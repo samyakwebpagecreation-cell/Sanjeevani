@@ -159,7 +159,7 @@ export const ParamedicHandoffView: React.FC<ParamedicHandoffViewProps> = ({
       generatedAt: new Date().toISOString()
     };
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://sanjeevani-v2.web.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasaathi.web.app';
     const docketDeepLink = `${origin}/?docket=${docketId}&gcs=${totalGCS}&sev=${triageCategory}&unresp=${unresponsiveMinutes * 60}&cpr=${cprMinutesDelivered * 60}`;
     const svg = generateQRCodeSVG(docketDeepLink, 220, '#0E5A50', '#FFFFFF');
     setQrSvg(svg);

@@ -61,8 +61,8 @@ export const BystanderSquadCard: React.FC<BystanderSquadCardProps> = ({
   };
 
   const handleCopyLink = async () => {
-    const rawOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://sanjeevani-v2.web.app';
-    const origin = (rawOrigin.includes('localhost') || rawOrigin.includes('127.0.0.1')) ? 'https://sanjeevani-v2.web.app' : rawOrigin;
+    const rawOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasaathi.web.app';
+    const origin = (rawOrigin.includes('localhost') || rawOrigin.includes('127.0.0.1')) ? 'https://rakshasaathi.web.app' : rawOrigin;
     const link = `${origin}/?squad=${session.id}`;
     try {
       await navigator.clipboard.writeText(link);
