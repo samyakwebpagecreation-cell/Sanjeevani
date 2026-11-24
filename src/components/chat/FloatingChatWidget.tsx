@@ -414,24 +414,36 @@ export const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                     <span>✅ WHAT TO DO (DO'S) • IMMEDIATE ACTION STEPS</span>
                   </div>
                   <div className="grid grid-cols-1 gap-2.5">
-                    {result.emergencySteps.map((step) => (
-                      <div 
-                        key={step.stepNumber}
-                        className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#13221C] border-2 border-slate-200 dark:border-[#223830] flex items-start space-x-3.5 shadow-2xs"
-                      >
-                        <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 font-mono shadow-xs">
-                          {step.stepNumber}
+                    {result.emergencySteps.map((step) => {
+                      const stepTitle = step.title || (step as any).action || (step as any).instruction || `Step ${step.stepNumber}`;
+                      const stepDetail = step.instruction || (step as any).detail || (step as any).description || '';
+                      return (
+                        <div 
+                          key={step.stepNumber}
+                          className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#13221C] border-2 border-slate-200 dark:border-[#223830] flex items-start gap-3.5 shadow-2xs text-[#0F172A] dark:text-white"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 font-mono shadow-xs">
+                            {step.stepNumber}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <h4 
+                              className="text-sm sm:text-base font-black text-[#0F172A] dark:!text-white leading-snug break-words"
+                              style={{ color: 'var(--app-ink, #0F172A)' }}
+                            >
+                              {stepTitle}
+                            </h4>
+                            {stepDetail && (
+                              <p 
+                                className="text-sm sm:text-base text-[#334155] dark:!text-slate-200 leading-relaxed font-medium break-words"
+                                style={{ color: 'var(--app-ink-muted, #334155)' }}
+                              >
+                                {stepDetail}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
-                            {step.title}
-                          </h4>
-                          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
-                            {step.instruction}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

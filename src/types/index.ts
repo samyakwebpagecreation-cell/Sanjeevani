@@ -8,6 +8,8 @@ export type InjuryProtocolId =
   | 'unconscious'
   | 'choking'
   | 'fracture'
+  | 'snakebite'
+  | 'seizure'
   | 'custom';
 
 export interface MicroStep {

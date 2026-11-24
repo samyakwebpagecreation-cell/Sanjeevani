@@ -418,11 +418,25 @@ export async function askRakshaSaathiBot(
       title: s.instruction,
       instruction: s.detail
     }));
-    contraindications = [
-      'Do NOT delay calling 112 if patient is unresponsive or breathing abnormally.',
-      'Do NOT give oral water, tea, or food to an unconscious or drowsy person.',
-      'Do NOT apply raw ice, toothpaste, or unverified folk pastes to open wounds/burns.'
-    ];
+    if (pKey === 'snakebite') {
+      contraindications = [
+        'Do NOT cut the bite site, suck venom with mouth, or tie arterial tourniquets.',
+        'Do NOT apply ice, potassium permanganate, electric shocks, or folk herbs.',
+        'Do NOT allow the victim to walk, run, or panic; keep them still.'
+      ];
+    } else if (pKey === 'seizure') {
+      contraindications = [
+        'Do NOT force spoons, fingers, shoes, or liquids into the mouth.',
+        'Do NOT physically restrain the victim\'s shaking arms or legs.',
+        'Do NOT leave the person unattended until they have fully regained awareness.'
+      ];
+    } else {
+      contraindications = [
+        'Do NOT delay calling 112 if patient is unresponsive or breathing abnormally.',
+        'Do NOT give oral water, tea, or food to an unconscious or drowsy person.',
+        'Do NOT apply raw ice, toothpaste, or unverified folk pastes to open wounds/burns.'
+      ];
+    }
     redFlags = proto.escalationTriggers.slice(0, 3);
   }
 

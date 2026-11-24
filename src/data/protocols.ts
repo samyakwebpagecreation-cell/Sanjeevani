@@ -240,6 +240,92 @@ export const FIRST_AID_PROTOCOLS: Record<string, FirstAidProtocol> = {
       }
     ]
   },
+  snakebite: {
+    id: 'snakebite',
+    title: 'Snakebite Emergency Protocol',
+    shortDesc: 'Immobilize bitten limb, keep patient calm, and rush immediately for Anti-Snake Venom (ASV).',
+    severity: 'critical',
+    requiresCamera: true,
+    iconName: 'AlertTriangle',
+    escalationTriggers: [
+      'Visible fang puncture marks with swelling, burning pain, or skin darkening',
+      'Drooping eyelids (ptosis), difficulty swallowing, or slurred speech (Neurotoxic signs)',
+      'Spontaneous bleeding from gums, nose, or puncture site (Hemotoxic signs)',
+      'Severe vomiting, dizziness, cold sweat, or sudden collapse'
+    ],
+    microSteps: [
+      {
+        id: 'snake-1',
+        stepNumber: 1,
+        instruction: 'Keep Victim Completely Calm & Immobilize Limb',
+        detail: 'Keep the victim seated or lying down completely still. Movement accelerates venom circulation through lymphatics. Position bitten limb at or slightly below heart level.',
+        actionPrompt: 'Immobilize limb below heart level',
+        cameraRequired: true,
+        audioPrompt: 'Keep the person completely still and calm. Do not let them walk. Keep the bitten area at or below heart level.'
+      },
+      {
+        id: 'snake-2',
+        stepNumber: 2,
+        instruction: 'Remove Rings & Apply Loose Sterile Bandage',
+        detail: 'Immediately remove rings, watches, bracelets, and tight clothing before tissue swelling sets in. Cover bite loosely with clean, dry gauze. Do NOT tie tight tourniquets.',
+        actionPrompt: 'Remove jewelry & cover bite loosely',
+        cameraRequired: false,
+        audioPrompt: 'Quickly remove all rings, watches, and tight clothing near the bite before swelling starts. Cover with a loose dry cloth.'
+      },
+      {
+        id: 'snake-3',
+        stepNumber: 3,
+        instruction: 'Rush to 112 / Civil Hospital with Polyvalent ASV',
+        detail: 'Call 112 immediately. Transport victim to the nearest government civil hospital or medical college stocked with Polyvalent Anti-Snake Venom (ASV). Bring photo of snake only if safe.',
+        actionPrompt: 'Call 112 & navigate to ASV trauma center',
+        cameraRequired: false,
+        audioPrompt: 'Call 112 immediately. Transport the patient to a hospital with anti-snake venom without delay.'
+      }
+    ]
+  },
+  seizure: {
+    id: 'seizure',
+    title: 'Seizure & Convulsion Protocol',
+    shortDesc: 'Protect head from trauma, clear surroundings, never force objects in mouth, and time duration.',
+    severity: 'critical',
+    requiresCamera: false,
+    iconName: 'AlertTriangle',
+    escalationTriggers: [
+      'Seizure lasts longer than 5 minutes (Status Epilepticus)',
+      'Second seizure occurs without person regaining consciousness',
+      'Difficulty breathing or blue discoloration of lips after seizure stops',
+      'Seizure occurs in water or resulted in head injury'
+    ],
+    microSteps: [
+      {
+        id: 'seiz-1',
+        stepNumber: 1,
+        instruction: 'Protect Head & Clear Dangerous Surroundings',
+        detail: 'Gently guide the person to the floor away from sharp objects, hard edges, or stairs. Place a soft jacket, pillow, or folded cloth under their head.',
+        actionPrompt: 'Head cushioned & area cleared',
+        cameraRequired: false,
+        audioPrompt: 'Clear hard objects away. Cushion their head with a folded jacket or towel. Do not hold them down.'
+      },
+      {
+        id: 'seiz-2',
+        stepNumber: 2,
+        instruction: 'Never Insert Objects Into Mouth & Time Seizure',
+        detail: 'DO NOT put spoons, fingers, cloth, or shoes into their mouth. It is impossible to swallow the tongue. Inserting items fractures teeth and obstructs airway. Look at watch to time duration.',
+        actionPrompt: 'Airway clear & duration timed',
+        cameraRequired: false,
+        audioPrompt: 'Do not put anything in their mouth. It is impossible to swallow the tongue. Note the exact start time.'
+      },
+      {
+        id: 'seiz-3',
+        stepNumber: 3,
+        instruction: 'Turn Onto Side (Recovery Position) When Jerking Stops',
+        detail: 'As jerking subsides, roll patient gently onto their side in recovery position to keep airway open and drain saliva. Stay until fully awake. Call 112 if lasting >5 minutes.',
+        actionPrompt: 'Turned to recovery position on side',
+        cameraRequired: false,
+        audioPrompt: 'When spasms stop, roll them onto their side so fluids can drain. Reassure them as they regain consciousness.'
+      }
+    ]
+  },
   custom: {
     id: 'custom',
     title: 'Symptom Triage & Guidance',
