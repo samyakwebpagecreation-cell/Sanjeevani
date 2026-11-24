@@ -216,7 +216,7 @@ export const AIMedicalCameraView: React.FC<AIMedicalCameraViewProps> = ({
   };
 
   const handleLoadDemoQR = (type: 'squad' | 'docket' | 'sos') => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasaathi.web.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasathi.web.app';
     if (type === 'squad') {
       handleProcessScannedQR(`${origin}/?squad=SQUAD-849201&cat=cardiac_cpr&title=CARDIAC%20ARREST&addr=City%20Center%20Metro%20Gate%203`);
     } else if (type === 'docket') {

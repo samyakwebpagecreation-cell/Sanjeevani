@@ -195,7 +195,7 @@ Technique Drills: ${userStats.drillsCompleted} (Best Rhythm: ${userStats.cprBest
 Emergency Incidents Managed: ${incidents.length}
 Verification ID: RS2-${Math.abs(userStats.xp * 37 + 1042)}
 Engine: Clinical AI & ARCore Cloud Anchors
-Verified by RakshaSaathi v2: https://rakshasaathi.web.app`;
+Verified by RakshaSaathi v2: https://rakshasathi.web.app`;
     navigator.clipboard.writeText(text);
     setCopiedToast(true);
     setTimeout(() => setCopiedToast(false), 2500);

@@ -164,7 +164,7 @@ DOCKET ID: #${docketId} (RakshaSaathi v2 Black-Box Telemetry).`;
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
     const origin = (typeof window !== 'undefined' && host !== 'localhost' && host !== '127.0.0.1')
       ? window.location.origin
-      : 'https://rakshasaathi.web.app';
+      : 'https://rakshasathi.web.app';
     const docketUrl = `${origin}/?docket=${docketId}&title=${encodeURIComponent(protocolTitle)}&cpr=${cprSeconds}&cycles=${cprCycles}&bpm=${cprAccuracy}&head=${headStrike}&water=${waterGiven}&sev=CRITICAL`;
     const svg = generateQRCodeSVG(docketUrl, 260, '#0E5A50', '#FFFFFF');
     setQrSvg(svg);

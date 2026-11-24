@@ -131,8 +131,8 @@ export function createParamedicHandout(
     sbarVerbal: sbarText.slice(0, 400)
   };
 
-  const rawOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasaathi.web.app';
-  const origin = (rawOrigin.includes('localhost') || rawOrigin.includes('127.0.0.1')) ? 'https://rakshasaathi.web.app' : rawOrigin;
+  const rawOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://rakshasathi.web.app';
+  const origin = (rawOrigin.includes('localhost') || rawOrigin.includes('127.0.0.1')) ? 'https://rakshasathi.web.app' : rawOrigin;
   const qrPayloadString = `${origin}/?docket=${handoutId}&title=${encodeURIComponent(cleanQuery.slice(0, 60))}&sev=${isEmergency ? 'CRITICAL' : 'URGENT'}`;
   const qrSvg = generateQRCodeSVG(qrPayloadString, 200, '#0E5A50', '#FFFFFF');
 
